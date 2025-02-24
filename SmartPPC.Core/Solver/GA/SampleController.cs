@@ -1,9 +1,8 @@
-﻿
-using GeneticSharp;
+﻿using GeneticSharp;
 
-namespace DDMRP_AI.Core;
+namespace SmartPPC.Core.Solver.GA;
 
-public class SampleController : ISampleController 
+public class SampleController : ISampleController
 {
     protected GeneticAlgorithm GA { get; private set; }
 

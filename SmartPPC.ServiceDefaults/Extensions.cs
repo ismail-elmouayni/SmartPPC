@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using SmartPPC.Core.Solver;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -30,6 +31,8 @@ public static class Extensions
             // Turn on service discovery by default
             http.AddServiceDiscovery();
         });
+
+        builder.Services.AddPpcSolver();
 
         return builder;
     }

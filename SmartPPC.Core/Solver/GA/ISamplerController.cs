@@ -1,6 +1,6 @@
 ﻿using GeneticSharp;
 
-namespace DDMRP_AI.Core;
+namespace SmartPPC.Core.Solver.GA;
 
 public interface ISampleController
 {

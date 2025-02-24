@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -7,10 +7,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="MathModelConfig.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="MathModelConfig.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SmartPPC.Core\SmartPPC.Core.csproj" />
     <ProjectReference Include="..\SmartPPC.ServiceDefaults\SmartPPC.ServiceDefaults.csproj" />
   </ItemGroup>
 
