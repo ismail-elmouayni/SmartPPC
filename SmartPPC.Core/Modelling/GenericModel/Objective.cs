@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartPPC.Core.Modelling.MIP;
+namespace DDMRP_AI.Core.Modelling.GenericModel;
 
 public class Objective : IObjective
 {
@@ -12,13 +12,8 @@ public class Objective : IObjective
     public bool Maximize { get; set; }
 
 
-    public float Evalute()
+    public double Evaluate()
     {
         return 0;
     }
-}
-
-public interface IObjective
-{
-    double Evalute();
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DDMRP_AI.Core.Modelling.MIP;
+namespace DDMRP_AI.Core.Modelling.GenericModel;
 
 public class TimeIndexedVariable : IndexedVariable
 {

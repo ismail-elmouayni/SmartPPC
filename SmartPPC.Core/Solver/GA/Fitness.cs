@@ -1,15 +1,16 @@
-﻿using GeneticSharp;
+﻿using DDMRP_AI.Core.Modelling;
+using GeneticSharp;
 using Microsoft.Extensions.Logging;
-using SmartPPC.Core.Modelling.MIP;
 using NCalc;
+using DDMRP_AI.Core.Modelling.GenericModel;
 
 namespace SmartPPC.Core.Solver.GA;
 
 public class Fitness : IFitness
 {
-    private MathModel _model;
+    private IMathModel _model;
 
-    public Fitness(MathModel model) => _model = model;
+    public Fitness(IMathModel model) => _model = model;
 
     public double Evaluate(IChromosome chromosome)
     {
@@ -20,14 +21,16 @@ public class Fitness : IFitness
 
         foreach (var constraint in _model.Constraints)
         {
-            if (!EvaluateConstraint(constraint.Expression, solution))
+            if (!constraint.IsVerified())
             {
                 penalty += 1000; // Pénalité pour les solutions non faisables
             }
         }
 
-        double objectiveValue = EvaluateExpression(_model.Objective.Expression, solution);
-        return _model.Objective.Maximize ? objectiveValue - penalty : objectiveValue + penalty;
+        //double objectiveValue = EvaluateExpression(_model.Objective.Expression, solution);
+        //return _model.Objective.Maximize ? objectiveValue - penalty : objectiveValue + penalty;
+
+        return solution.ObjectiveFunction.Evaluate();
     }
 
     public bool EvaluateConstraint(string expression, Dictionary<string, double> solution)

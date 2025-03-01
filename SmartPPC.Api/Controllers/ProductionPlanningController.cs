@@ -1,8 +1,6 @@
+using DDMRP_AI.Core.Modelling;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
-using SmartPPC.Core.Modelling.MIP;
 using SmartPPC.Core.Solver;
-using FluentResults;
 
 namespace Api.Controllers;
 
@@ -10,11 +8,6 @@ namespace Api.Controllers;
 [Route("[controller]")]
 public class ProductionPlanningController : ControllerBase
 {
-    private static readonly string[] Summaries = new[]
-    {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
-
     private readonly ILogger<ProductionPlanningController> _logger;
     private readonly IPPCSolver _solver;
 
@@ -29,9 +22,9 @@ public class ProductionPlanningController : ControllerBase
     [HttpGet("math-model")]
     public IResult GetMathModel()
     {
-       var model = _solver.GetMathModel();
+       var getResult = _solver.GetMathModel();
 
-       return Results.Ok(model);
+       return getResult.IsSuccess ? Results.Ok(getResult.Value) : Results.Problem(string.Join(",", getResult.Errors));
     }
 
     [HttpGet("resolve")]

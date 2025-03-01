@@ -1,12 +1,13 @@
-﻿using FluentResults;
-using SmartPPC.Core.Modelling.MIP;
+﻿using DDMRP_AI.Core.Modelling;
+using DDMRP_AI.Core.Modelling.GenericModel;
+using FluentResults;
 
 namespace SmartPPC.Core.Solver;
 
 public interface IPPCSolver
 {
-    const string ConfigFilePath = "MathModelConfig.json";
+    const string ConfigFilePath = "DDRMP_ModelConfig.json";
 
-    MathModel? GetMathModel(string configFilePath = ConfigFilePath);
-    Result<Dictionary<string, double>> Resolve(string configFilePath = ConfigFilePath);
+    Result<IMathModel?> GetMathModel(string configFilePath = ConfigFilePath);
+    Result<IMathModel> Resolve(string configFilePath = ConfigFilePath);
 }

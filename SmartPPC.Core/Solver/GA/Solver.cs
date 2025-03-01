@@ -1,64 +1,32 @@
 ﻿
-using System.Runtime.CompilerServices;
-using DDMRP_AI.Core.Modelling.MIP;
+using DDMRP_AI.Core.Modelling;
 using FluentResults;
 using GeneticSharp;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using SmartPPC.Core.Modelling.MIP;
+using SmartPPC.Core.Modelling.DDMRP;
 
 namespace SmartPPC.Core.Solver.GA;
 
 public class Solver : IPPCSolver
 {
-    public Result<MathModel?> GetMathModel(string configFilePath)
+
+    public Result<IMathModel?> GetMathModel(string configFilePath)
     {
-        var jsonObject = JObject.Parse(File.ReadAllText(configFilePath));
+        var importResult = DDMRP_ModelConfigurator.ImportModelInputs(configFilePath);
 
-        var constraints = jsonObject["constraints"]?.ToObject<List<Constraint>>();
-        var objective = jsonObject["objective"]?.ToObject<Objective>();
-        var variablesToken = jsonObject["variables"];
-
-        if (objective == null)
-        {
-            Result.Fail<MathModel?>("Objective is missing in MathModel config file");
-        }
-
-        if (constraints == null)
-        {
-            Result.Fail<MathModel?>("Constraints are missing in MathModel config file. " +
-                                    "Event if there is no constraints, constraints section should be added and empty");
-        }
-
-        if (variablesToken == null || !variablesToken.Any())
-        {
-            Result.Fail<MathModel?>("Variables are missing in MathModel config file");
-        }
-
-
-        var variables = (from variableToken in variablesToken
-            let variableType = variableToken["variable_type"]?.ToString()
-            select variableType switch
-            {
-                "indexed" => variableToken.ToObject<IndexedVariable>(),
-                "time_indexed" => variableToken.ToObject<TimeIndexedVariable>(),
-                _ => variableToken.ToObject<Variable>()
-
-            }).ToList();
-
-        return Result.Ok(new MathModel
-        {
-            Variables = variables,
-            Constraints = constraints,
-            Objective = objective
-        });
+        return importResult.IsSuccess ? 
+            Result.Ok((IMathModel?) importResult.Value) : Result.Fail<IMathModel?>(importResult.Errors);
     }
 
-    public Result<Dictionary<string, double>> Resolve(string configFilePath)
+    public Result<IMathModel> Resolve(string configFilePath)
     {
-        var model = GetMathModel(configFilePath);
+        var exResult = GetMathModel(configFilePath);
 
+        if (exResult.IsFailed)
+        {
+            return Result.Fail<IMathModel>(exResult.Errors);
+        }
+
+        var model = exResult.Value;
         try
         {
             var chromosome = new Chromosome(model);
@@ -81,9 +49,54 @@ public class Solver : IPPCSolver
 
             return Result.Ok(bestSolution);
         }
+
         catch (Exception ex)
         {
             return Result.Fail($"An error occured while solving the problem : {ex.Message}");
         }
     }
+
+    // Not used right now 
+    //public Result<IMathModel> GetGenericMathModel(string configFilePath)
+    //{
+    //    var jsonObject = JObject.Parse(File.ReadAllText(configFilePath));
+
+    //    var constraints = jsonObject["constraints"]?.ToObject<List<Constraint>>();
+    //    var objective = jsonObject["objective"]?.ToObject<Objective>();
+    //    var variablesToken = jsonObject["variables"];
+
+    //    if (objective == null)
+    //    {
+    //        Result.Fail<MathModel?>("Objective is missing in MathModel config file");
+    //    }
+
+    //    if (constraints == null)
+    //    {
+    //        Result.Fail<MathModel?>("Constraints are missing in MathModel config file. " +
+    //                                "Event if there is no constraints, constraints section should be added and empty");
+    //    }
+
+    //    if (variablesToken == null || !variablesToken.Any())
+    //    {
+    //        Result.Fail<MathModel?>("Variables are missing in MathModel config file");
+    //    }
+
+
+    //    var variables = (from variableToken in variablesToken
+    //                     let variableType = variableToken["variable_type"]?.ToString()
+    //                     select variableType switch
+    //                     {
+    //                         "indexed" => variableToken.ToObject<IndexedVariable>(),
+    //                         "time_indexed" => variableToken.ToObject<TimeIndexedVariable>(),
+    //                         _ => variableToken.ToObject<Variable>()
+
+    //                     }).ToList();
+
+    //    return Result.Ok(new MathModel
+    //    {
+    //        Variables = variables,
+    //        //Constraints = constraints,
+    //        ObjectiveFunction = objective
+    //    });
+    //}
 }

@@ -1,0 +1,40 @@
+{
+  "PlanningHorizon": 30,
+  "PeakHorizon": 15,
+  "OutputStationDemandVariability": 0.2,
+  "StationDeclarations": [
+    {
+      "StationIndex": 0,
+      "ProcessingTime": 2,
+      "InitialBuffer": 50,
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 1,
+          "InputAmount": 1
+        },
+        {
+          "NextStationIndex": 2,
+          "InputAmount": 2
+        }
+      ]
+    },
+    {
+      "StationIndex": 1,
+      "ProcessingTime": 2,
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 3,
+          "InputAmount": 2
+        }
+      ]
+    },
+    {
+      "StationIndex": 2,
+      "ProcessingTime": 2
+    },
+    {
+      "StationIndex": 3,
+      "ProcessingTime": 2
+    }
+  ]
+}

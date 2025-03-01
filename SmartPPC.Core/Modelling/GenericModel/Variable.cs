@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartPPC.Core.Modelling.MIP;
+namespace DDMRP_AI.Core.Modelling.GenericModel;
 
 public class Variable
 {

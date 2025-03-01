@@ -7,10 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="DDRMP_ModelConfig.json" />
     <Content Remove="MathModelConfig.json" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="DDRMP_ModelConfig.json" />
     <None Include="MathModelConfig.json" />
   </ItemGroup>
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SmartPPC.Core.Modelling.MIP;
+namespace DDMRP_AI.Core.Modelling.GenericModel;
 
 public class Constraint : IConstraint
 {
@@ -14,9 +14,4 @@ public class Constraint : IConstraint
     {
         return true;
     }
-}
-
-public interface IConstraint
-{
-    bool IsVerified();
 }
