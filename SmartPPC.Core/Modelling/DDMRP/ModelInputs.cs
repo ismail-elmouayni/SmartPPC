@@ -10,7 +10,7 @@ public class ModelInputs
 
 public record StationDeclaration(
     int? StationIndex,
-    int? ProcessingTime,
+    float? ProcessingTime,
     int? InitialBuffer,
     float? DemandVariability,
     List<int>? DemandForecast,

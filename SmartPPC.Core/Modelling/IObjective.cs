@@ -8,5 +8,5 @@ namespace DDMRP_AI.Core.Modelling;
 
 public interface IObjective
 {
-    double Evaluate();
+    float? Evaluate();
 }

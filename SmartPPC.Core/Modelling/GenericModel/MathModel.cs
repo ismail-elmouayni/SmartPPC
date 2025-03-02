@@ -12,7 +12,8 @@ public class MathModel : IMathModel
     public List<Variable> Variables { get; set; }
     public int DecisionVariablesCount => Variables.Count;
     public List<IConstraint> Constraints { get; set; }
-    public IObjective ObjectiveFunction { get; set; }
+    public MathModelStatus Status { get; set; }
+    public float? ObjectiveFunctionValue { get; set; }
     public IEnumerable<Gene> ToGenes()
     {
         throw new NotImplementedException();

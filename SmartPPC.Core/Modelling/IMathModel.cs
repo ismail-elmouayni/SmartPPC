@@ -10,12 +10,22 @@ namespace DDMRP_AI.Core.Modelling;
 
 public interface IMathModel
 {
-    public List<Variable> Variables { get; set; }
-    public int DecisionVariablesCount { get; }
-    public List<IConstraint> Constraints { get; set; }
-    public IObjective ObjectiveFunction { get; set; }
+    List<Variable> Variables { get; set; }
+    int DecisionVariablesCount { get; }
+    List<IConstraint> Constraints { get; set; }
+    MathModelStatus Status { get; set; }
+
+    float? ObjectiveFunctionValue { get;}
 
     IEnumerable<Gene> ToGenes();
     void GenerateRandomSolution();
     void SetDecisionVariableRandomly(int index);
+}
+
+public enum MathModelStatus
+{
+    Created,
+    InputsImported,
+    Initialized,
+    OptimumFound
 }

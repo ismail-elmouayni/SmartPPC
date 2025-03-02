@@ -30,7 +30,7 @@ public class Fitness : IFitness
         //double objectiveValue = EvaluateExpression(_model.Objective.Expression, solution);
         //return _model.Objective.Maximize ? objectiveValue - penalty : objectiveValue + penalty;
 
-        return solution.ObjectiveFunction.Evaluate();
+        return (double) solution.ObjectiveFunctionValue;
     }
 
     public bool EvaluateConstraint(string expression, Dictionary<string, double> solution)

@@ -12,7 +12,7 @@ public class Objective : IObjective
     public bool Maximize { get; set; }
 
 
-    public double Evaluate()
+    public float? Evaluate()
     {
         return 0;
     }

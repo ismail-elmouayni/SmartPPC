@@ -12,23 +12,29 @@ public class MinBuffersAndMaxDemandsObjective : IObjective
         _stations = stations;
     }
 
-    public double Evaluate()
+    public float? Evaluate()
     {
-        return BuffersOptimizationWeight * AverageBuffersLevel(_stations) +
-               DemandsOptimizationWeight * AverageSatisfiedDemandsLevel(_stations);
+        return (float)(BuffersOptimizationWeight * AverageBuffersLevel(_stations) +
+            DemandsOptimizationWeight * AverageSatisfiedDemandsLevel(_stations));
     }
 
     public static double AverageBuffersLevel(IEnumerable<Station> stations)
-        => stations.Sum(s => s.HasBuffer ? s.StateTimeLine.Average(state => state.Buffer) : 0);
+    {
+        var criteriaValue = stations.Sum(s => s.HasBuffer ? s.StateTimeLine.Average(state => state.Buffer) : 0);
+
+        return criteriaValue;
+    }
 
     public static double AverageSatisfiedDemandsLevel(IEnumerable<Station> stations)
     {
         if (stations.Any(s => s.AverageDemand is null))
         {
-            throw new InvalidOperationException("Average demand and demand not fully calculated yet to determine" +
-                                                "Satisfied demands");
+            throw new InvalidOperationException("Average demand and demand not fully calculated yet to determine " +
+                                                "satisfied demands");
         }
         
-        return stations.Sum(s => s.StateTimeLine.Sum(state => Math.Max(state.Demand!.Value - state.Buffer, 0)));
+        var criteriaValue =  stations.Sum(s => s.StateTimeLine.Sum(state => Math.Max(state.Demand!.Value - state.Buffer, 0)));
+
+        return criteriaValue;
     }
 }

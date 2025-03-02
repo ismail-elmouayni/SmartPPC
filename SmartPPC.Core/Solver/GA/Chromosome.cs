@@ -15,19 +15,13 @@ public class Chromosome(int length) : ChromosomeBase(length), IBinaryChromosome
         _model = model;
         _solution = new Dictionary<string, double>();
 
-        model.GenerateRandomSolution();
-        var genes = model.ToGenes();
+        _model.GenerateRandomSolution();
+        var genes = _model.ToGenes();
 
         for (int i = 0; i < genes.Count(); i++)
         {
             ReplaceGene(i, genes.ElementAt(i));
         }
-
-        //foreach (var variable in model.Variables)
-        //{
-        //    var gene = new Gene(new Random().NextDouble() * (variable.UpperBound - variable.LowerBound) + variable.LowerBound);
-        //    ReplaceGene(_model.Variables.IndexOf(variable), gene);
-        //}
     }
 
     public override IChromosome CreateNew()

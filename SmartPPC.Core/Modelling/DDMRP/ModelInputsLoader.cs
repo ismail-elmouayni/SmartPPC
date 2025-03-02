@@ -20,17 +20,17 @@ namespace SmartPPC.Core.Modelling.DDMRP
 
                 if (configOptions == null)
                 {
-                    return Result.Fail<PpcModel>("Failed to deserialize Model config options.");
+                    return Result.Fail<PpcModel>("Failed to read model inputs from json file.");
                 }
 
                 if (configOptions.StationDeclarations == null || configOptions.StationDeclarations.Count == 0)
                 {
-                    return Result.Fail<PpcModel>("No station declarations found in the config file.");
+                    return Result.Fail<PpcModel>("No station declarations found in the model inputs file.");
                 }
 
                 var model = new PpcModel
                 {
-                    Stations = ImportStations(configOptions.StationDeclarations, configOptions.PlanningHorizon).ToList(),
+                    Stations = ImportStationsAndDemandInfo(configOptions.StationDeclarations, configOptions.PlanningHorizon).ToList(),
                     PeakHorizon = configOptions.PeakHorizon,
                     StationPrecedences = SetStationsPrecedences(configOptions.StationDeclarations),
                     StationInputPrecedences = SetStationsInputPrecedences(configOptions.StationDeclarations),
@@ -42,7 +42,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
             }
             catch (Exception ex)
             {
-                return Result.Fail<PpcModel>($"An error occurred while configuring the model: {ex.Message}");
+                return Result.Fail<PpcModel>($"An error occurred while reading model inputs from file : {ex.Message}");
             }
         }
 
@@ -114,11 +114,31 @@ namespace SmartPPC.Core.Modelling.DDMRP
             return stationsBuffersSizes;
         }
 
-        private static IOrderedEnumerable<Station> ImportStations(List<StationDeclaration> stationDeclarations,
+        private static IOrderedEnumerable<Station> ImportStationsAndDemandInfo(List<StationDeclaration> stationDeclarations,
             int planningHorizon)
         {
             var inputStationsIndex = stationDeclarations.Where(d => d.NextStationsInput != null)
                 .SelectMany(d => d.NextStationsInput!.Select(ni => ni.NextStationIndex));
+            
+            var badDemandForecastDeclarations =
+                stationDeclarations.Where(d => d.DemandForecast != null && d.DemandForecast.Count != planningHorizon)
+                    .ToList();
+
+            if (badDemandForecastDeclarations.Any())
+            {
+                throw new InvalidDataException($"Demand forecast size different from planning horizon for output stations " +
+                                               $"{string.Join(",", badDemandForecastDeclarations.Select(d => "(station : "+ d.StationIndex + ", PH :"+ d.DemandForecast!.Count +")" ))}");
+            }
+
+            var outputStationWithoutDemandVariability =
+                stationDeclarations.Where(d => d.NextStationsInput is null && d.DemandVariability is null)
+                    .ToList();
+
+            if (outputStationWithoutDemandVariability.Any())
+            {
+                throw new InvalidDataException("Demand variability for output station not set properly for stations : " +
+                                               $"{string.Join(",", outputStationWithoutDemandVariability.Select(d => d.StationIndex))}");
+            }
 
             var stations = stationDeclarations
                 .Select(s => new Station

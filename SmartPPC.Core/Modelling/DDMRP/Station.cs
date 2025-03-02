@@ -10,23 +10,15 @@ public class Station
     public bool IsInputStation { get; set; }
     public int HasBufferInt => HasBuffer ? 1 : 0;
     public int Index { get; set; }
-    public int ProcessingTime { get; set; }
-    public int? LeadTime { get; set; }
+    public float ProcessingTime { get; set; }
+    public float? LeadTime { get; set; }
 
-    public float? AverageDemand
-    {
-        get
-        {
-            if (StateTimeLine.Any(state => state.Demand is null))
-                return null;
-
-            return (float?)StateTimeLine.Average(state => state.Demand);
-        }
-    }
+    public float? AverageDemand { get; set; }
+ 
     public float? LeadTimeFactor { get; set; }
     public float? DemandVariability { get; set; }
 
-    public int? TOR
+    public float? TOR
     {
         get
         {
@@ -35,11 +27,11 @@ public class Station
                 return null;
             }
 
-            return (int)(LeadTime * AverageDemand * (LeadTimeFactor + LeadTimeFactor * DemandVariability));
+            return LeadTime * AverageDemand * (LeadTimeFactor + LeadTimeFactor * DemandVariability);
         }
     }
 
-    public int? TOG
+    public float? TOG
     {
         get
         {
@@ -48,11 +40,11 @@ public class Station
                 return null;
             }
 
-            return TOY + (int)(LeadTime * AverageDemand * LeadTimeFactor);
+            return TOY + LeadTime * AverageDemand * LeadTimeFactor;
         }
     }
 
-    public int? TOY
+    public float? TOY
     {
         get
         {
@@ -61,7 +53,7 @@ public class Station
                 return null;
             }
 
-            return TOR + (int)(LeadTime * AverageDemand);
+            return TOR + LeadTime * AverageDemand;
         }
     }
 
