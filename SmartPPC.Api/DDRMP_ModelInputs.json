@@ -1,0 +1,105 @@
+{
+  "PlanningHorizon": 30,
+  "PeakHorizon": 15,
+  "StationDeclarations": [
+    {
+      "StationIndex": 0,
+      "ProcessingTime": 2,
+      "InitialBuffer": 50,
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 1,
+          "InputAmount": 1
+        },
+        {
+          "NextStationIndex": 2,
+          "InputAmount": 2
+        }
+      ]
+    },
+    {
+      "StationIndex": 1,
+      "ProcessingTime": 2,
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 3,
+          "InputAmount": 2
+        }
+      ]
+    },
+    {
+      "StationIndex": 2,
+      "ProcessingTime": 2,
+      "DemandVariability" : 0.2,
+      "DemandForecast": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        19,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        19,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        19
+      ]
+    },
+    {
+      "StationIndex": 3,
+      "ProcessingTime": 2,
+      "DemandVariability": 0.2,
+      "DemandForecast": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        19,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        19,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        19
+      ]
+    }
+  ]
+}

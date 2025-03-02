@@ -11,7 +11,7 @@ public class Solver : IPPCSolver
 
     public Result<IMathModel?> GetMathModel(string configFilePath)
     {
-        var importResult = DDMRP_ModelConfigurator.ImportModelInputs(configFilePath);
+        var importResult = ModelInputsLoader.ImportModelInputs(configFilePath);
 
         return importResult.IsSuccess ? 
             Result.Ok((IMathModel?) importResult.Value) : Result.Fail<IMathModel?>(importResult.Errors);

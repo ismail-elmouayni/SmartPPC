@@ -4,40 +4,37 @@ using DDMRP_AI.Core.Modelling.DDMRP;
 
 namespace SmartPPC.Core.Modelling.DDMRP
 {
-    public class DDMRP_ModelConfigurator
+    public class ModelInputsLoader
     {
         /// <summary>
         /// Import model input, such as station declarations, planning horizon etc. from config file
         /// </summary>
         /// <param name="configFilePath"> JSON Configuration file.</param>
-        /// <returns> Configured <see cref="DDMRP_Model"/></returns>
-        public static Result<DDMRP_Model> ImportModelInputs(string configFilePath)
+        /// <returns> Configured <see cref="PpcModel"/></returns>
+        public static Result<PpcModel> ImportModelInputs(string configFilePath)
         {
             try
             {
                 string jsonContent = File.ReadAllText(configFilePath);
-                var configOptions = JsonConvert.DeserializeObject<DDMRP_ConfigOptions>(jsonContent);
+                var configOptions = JsonConvert.DeserializeObject<ModelInputs>(jsonContent);
 
                 if (configOptions == null)
                 {
-                    return Result.Fail<DDMRP_Model>("Failed to deserialize Model config options.");
+                    return Result.Fail<PpcModel>("Failed to deserialize Model config options.");
                 }
 
                 if (configOptions.StationDeclarations == null || configOptions.StationDeclarations.Count == 0)
                 {
-                    return Result.Fail<DDMRP_Model>("No station declarations found in the config file.");
+                    return Result.Fail<PpcModel>("No station declarations found in the config file.");
                 }
 
-                var model = new DDMRP_Model
+                var model = new PpcModel
                 {
+                    Stations = ImportStations(configOptions.StationDeclarations, configOptions.PlanningHorizon).ToList(),
                     PeakHorizon = configOptions.PeakHorizon,
-                    OutputStationDemandVariability = configOptions.OutputStationDemandVariability,
-
                     StationPrecedences = SetStationsPrecedences(configOptions.StationDeclarations),
                     StationInputPrecedences = SetStationsInputPrecedences(configOptions.StationDeclarations),
-                    StationInitialBuffer = SetStationsInitialBuffer(configOptions.StationDeclarations),
-
-                    Stations = ImportStations(configOptions.StationDeclarations, configOptions.PlanningHorizon)
+                    StationInitialBuffer = SetStationsInitialBuffer(configOptions.StationDeclarations)
                 };
 
 
@@ -45,7 +42,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
             }
             catch (Exception ex)
             {
-                return Result.Fail<DDMRP_Model>($"An error occurred while configuring the model: {ex.Message}");
+                return Result.Fail<PpcModel>($"An error occurred while configuring the model: {ex.Message}");
             }
         }
 
@@ -60,7 +57,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
 
                 if (precedence.NextStationsInput == null || precedence.NextStationsInput.Count == 0)
                 {
-                    stationsPrecedences[precedence.StationIndex] = isStationNext;
+                    stationsPrecedences[precedence.StationIndex!.Value] = isStationNext;
                     continue;
                 }
 
@@ -69,7 +66,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
                     isStationNext[input.NextStationIndex] = 1;
                 }
 
-                stationsPrecedences[precedence.StationIndex] = isStationNext;
+                stationsPrecedences[precedence.StationIndex!.Value] = isStationNext;
             }
 
             return stationsPrecedences;
@@ -86,7 +83,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
 
                 if (precedence.NextStationsInput == null || precedence.NextStationsInput.Count == 0)
                 {
-                    stationsInputPrecedences[precedence.StationIndex] = nextStationInput;
+                    stationsInputPrecedences[precedence.StationIndex!.Value] = nextStationInput;
                     continue;
                 }
 
@@ -95,7 +92,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
                     nextStationInput[input.NextStationIndex] = input.InputAmount;
                 }
 
-                stationsInputPrecedences[precedence.StationIndex] = nextStationInput;
+                stationsInputPrecedences[precedence.StationIndex!.Value] = nextStationInput;
             }
 
             return stationsInputPrecedences;
@@ -110,7 +107,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
             {
                 if (buffer.InitialBuffer.HasValue)
                 {
-                    stationsBuffersSizes[buffer.StationIndex] = buffer.InitialBuffer.Value;
+                    stationsBuffersSizes[buffer.StationIndex!.Value] = buffer.InitialBuffer.Value;
                 }
             }
 
@@ -120,16 +117,26 @@ namespace SmartPPC.Core.Modelling.DDMRP
         private static IOrderedEnumerable<Station> ImportStations(List<StationDeclaration> stationDeclarations,
             int planningHorizon)
         {
-            var stations = Enumerable.Range(0, stationDeclarations.Count)
+            var inputStationsIndex = stationDeclarations.Where(d => d.NextStationsInput != null)
+                .SelectMany(d => d.NextStationsInput!.Select(ni => ni.NextStationIndex));
+
+            var stations = stationDeclarations
                 .Select(s => new Station
                 {
-                    Index = s,
+                    Index = s.StationIndex ?? throw new InvalidDataException("Station index of one of the station declaration not declared"),
+                    IsOutputStation = s.NextStationsInput is null,
+                    IsInputStation = !inputStationsIndex.Contains(s.StationIndex.Value),
+                    DemandVariability = s.DemandVariability,
+                    ProcessingTime = s.ProcessingTime ?? throw new InvalidDataException($"Processing time for station {s.StationIndex} not declared"),
+
                     StateTimeLine = Enumerable.Range(0, planningHorizon)
                         .Select(t => new TimeIndexedStationState
                         {
-                            Instant = t
+                            Instant = t,
+                            Demand =  s.DemandForecast?.ElementAt(t)
                         })
                         .OrderBy(s => s.Instant)
+                        .ToList()
                 });
 
             return stations.OrderBy(s => s.Index);

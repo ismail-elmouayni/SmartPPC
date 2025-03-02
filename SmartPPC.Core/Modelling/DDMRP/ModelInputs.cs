@@ -1,18 +1,19 @@
 ﻿
 namespace DDMRP_AI.Core.Modelling.DDMRP;
 
-public class DDMRP_ConfigOptions
+public class ModelInputs
 {
     public int PlanningHorizon { get; set; }
     public int PeakHorizon { get; set; }
-    public float OutputStationDemandVariability { get; set; }
     public List<StationDeclaration>? StationDeclarations { get; set; }
 }
 
 public record StationDeclaration(
-    int StationIndex,
-    int ProcessingTime,
+    int? StationIndex,
+    int? ProcessingTime,
     int? InitialBuffer,
+    float? DemandVariability,
+    List<int>? DemandForecast,
     List<StationInput>? NextStationsInput);
 
 public record StationInput(

@@ -15,7 +15,7 @@ public interface IMathModel
     public List<IConstraint> Constraints { get; set; }
     public IObjective ObjectiveFunction { get; set; }
 
-    IOrderedEnumerable<Gene> ToGenes();
+    IEnumerable<Gene> ToGenes();
     void GenerateRandomSolution();
     void SetDecisionVariableRandomly(int index);
 }

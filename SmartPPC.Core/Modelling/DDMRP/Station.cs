@@ -6,12 +6,23 @@ public class Station
 {
     [Description("decision-variable")]
     public bool HasBuffer { get; set; }
-
+    public bool IsOutputStation { get; set; }
+    public bool IsInputStation { get; set; }
     public int HasBufferInt => HasBuffer ? 1 : 0;
     public int Index { get; set; }
     public int ProcessingTime { get; set; }
-    public int LeadTime { get; set; }
-    public float? AverageDemand => (float)StateTimeLine.Average(state => state.Demand);
+    public int? LeadTime { get; set; }
+
+    public float? AverageDemand
+    {
+        get
+        {
+            if (StateTimeLine.Any(state => state.Demand is null))
+                return null;
+
+            return (float?)StateTimeLine.Average(state => state.Demand);
+        }
+    }
     public float? LeadTimeFactor { get; set; }
     public float? DemandVariability { get; set; }
 
@@ -96,6 +107,6 @@ public class Station
     //    }
     //}
 
-    public IOrderedEnumerable<TimeIndexedStationState> StateTimeLine { get; set; }
-        = Enumerable.Empty<TimeIndexedStationState>().OrderBy(x => x.Instant);
+    public List<TimeIndexedStationState> StateTimeLine { get; set; }
+        = new();
 }

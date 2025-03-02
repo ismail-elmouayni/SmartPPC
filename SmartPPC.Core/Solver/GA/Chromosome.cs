@@ -18,7 +18,7 @@ public class Chromosome(int length) : ChromosomeBase(length), IBinaryChromosome
         model.GenerateRandomSolution();
         var genes = model.ToGenes();
 
-        for (int i = 0; i < model.Variables.Count; i++)
+        for (int i = 0; i < genes.Count(); i++)
         {
             ReplaceGene(i, genes.ElementAt(i));
         }
