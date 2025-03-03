@@ -1,7 +1,6 @@
-﻿using DDMRP_AI.Core.Modelling.GenericModel;
-using GeneticSharp;
+﻿using GeneticSharp;
 
-namespace DDMRP_AI.Core.Modelling.DDMRP;
+namespace SmartPPC.Core.Modelling.DDMRP;
 
 public class PpcModel : IMathModel
 {
@@ -14,7 +13,6 @@ public class PpcModel : IMathModel
     public int[] StationInitialBuffer { get; set; }
     public List<Station> Stations { get; set; }
     public int DecisionVariablesCount => Stations.Count();
-    public List<Variable> Variables { get; set; }
     public MathModelStatus Status { get; set; }
 
     public float? ObjectiveFunctionValue

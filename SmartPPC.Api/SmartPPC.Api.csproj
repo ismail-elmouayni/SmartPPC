@@ -8,12 +8,10 @@
 
   <ItemGroup>
     <Content Remove="DDRMP_ModelInputs.json" />
-    <Content Remove="MathModelConfig.json" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="DDRMP_ModelInputs.json" />
-    <None Include="MathModelConfig.json" />
   </ItemGroup>
 
   <ItemGroup>

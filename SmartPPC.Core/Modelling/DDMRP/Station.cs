@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace DDMRP_AI.Core.Modelling.DDMRP;
+namespace SmartPPC.Core.Modelling.DDMRP;
 
 public class Station
 {

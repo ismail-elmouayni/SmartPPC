@@ -1,8 +1,6 @@
-﻿using DDMRP_AI.Core.Modelling;
+﻿using SmartPPC.Core.Modelling;
 using GeneticSharp;
-using Microsoft.Extensions.Logging;
 using NCalc;
-using DDMRP_AI.Core.Modelling.GenericModel;
 
 namespace SmartPPC.Core.Solver.GA;
 

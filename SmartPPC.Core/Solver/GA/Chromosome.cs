@@ -1,6 +1,4 @@
-﻿using System.Formats.Tar;
-using DDMRP_AI.Core.Modelling;
-using DDMRP_AI.Core.Modelling.GenericModel;
+﻿using SmartPPC.Core.Modelling;
 using GeneticSharp;
 
 namespace SmartPPC.Core.Solver.GA;

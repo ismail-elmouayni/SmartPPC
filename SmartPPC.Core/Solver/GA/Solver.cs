@@ -1,5 +1,5 @@
 ﻿
-using DDMRP_AI.Core.Modelling;
+using SmartPPC.Core.Modelling;
 using FluentResults;
 using GeneticSharp;
 using SmartPPC.Core.Modelling.DDMRP;

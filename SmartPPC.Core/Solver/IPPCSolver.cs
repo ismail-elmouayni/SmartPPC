@@ -1,5 +1,4 @@
-﻿using DDMRP_AI.Core.Modelling;
-using DDMRP_AI.Core.Modelling.GenericModel;
+﻿using SmartPPC.Core.Modelling;
 using FluentResults;
 
 namespace SmartPPC.Core.Solver;

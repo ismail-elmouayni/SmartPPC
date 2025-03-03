@@ -1,4 +1,4 @@
-﻿namespace DDMRP_AI.Core.Modelling.DDMRP;
+﻿namespace SmartPPC.Core.Modelling.DDMRP;
 
 public class MinBuffersAndMaxDemandsObjective : IObjective
 {
