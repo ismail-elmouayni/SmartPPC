@@ -5,7 +5,7 @@
     {
       "StationIndex": 0,
       "ProcessingTime": 0.2,
-      "InitialBuffer": 50,
+      "InitialBuffer": 200,
       "NextStationsInput": [
         {
           "NextStationIndex": 1,

@@ -6,14 +6,47 @@ public class PpcModel : IMathModel
 {
     private readonly IObjective _objectiveFunction;
 
+    /// <summary>
+    /// The horizon in which we look for a peak demand. 
+    /// </summary>
     public int PeakHorizon { get; set; }
+
+    /// <summary>
+    /// The set of constraints that the model must satisfy.
+    /// </summary>
     public List<IConstraint> Constraints { get; set; }
+
+    /// <summary>
+    /// The input workflow between stations i.e.
+    /// StationInputPrecedences[i][j] = 15 if station i send a 5 inputs station j.
+    /// </summary>
     public int[][] StationInputPrecedences { get; set; }
+
+    /// <summary>
+    /// the link between stations StationPrecedences[i][j] = 1 if station i is a predecessor of station j.
+    /// </summary>
     public int[][] StationPrecedences { get; set; }
+
+    /// <summary>
+    /// Initial buffer for each station.
+    /// </summary>
     public int[] StationInitialBuffer { get; set; }
+
+    /// <summary>
+    /// Stations
+    /// </summary>
     public List<Station> Stations { get; set; }
+
+    /// <summary>
+    /// The number of decision variables in the model.
+    /// </summary>
     public int DecisionVariablesCount => Stations.Count();
+
+    /// <summary>
+    /// 
+    /// </summary>
     public MathModelStatus Status { get; set; }
+
 
     public float? ObjectiveFunctionValue
     {
@@ -30,7 +63,11 @@ public class PpcModel : IMathModel
 
     public PpcModel()
     {
-        Stations = new List<Station>();
+        Stations = new List<Station>()
+        {
+
+        };
+        
         Constraints = new List<IConstraint>
         {
             new ReplenishmentsConstraint(Stations)
@@ -44,19 +81,18 @@ public class PpcModel : IMathModel
         // The solution will consist of determining the station with buffers.
         // The other info will be generated in a deterministic way using DDMRP rules.
         return Stations.OrderBy(s => s.Index)
-            .Select(s => new Gene(s.HasBufferInt))
-            .ToList();
+            .Select(s => new Gene(s.HasBufferInt));
     }
 
-    public void SetDecisionVariableRandomly(int index)
+    public void SetDecisionVariableRandomly(int stationIndex)
     {
         if (Status < MathModelStatus.Initialized)
         {
             throw new InvalidOperationException(
-                $"Model not initialized to regenerate a new buffer config for position {index}");
+                $"Model not initialized to regenerate a new buffer config for position {stationIndex}");
         }
 
-        var station = Stations.Single(s => s.Index == index);
+        var station = Stations.Single(s => s.Index == stationIndex);
 
         var value = new Random().Next(0, 2);
         station.HasBuffer = (value == 1);
@@ -67,8 +103,7 @@ public class PpcModel : IMathModel
     public void GenerateRandomSolution()
     {
         var outputStationsIndices = Stations.Where(s => s.IsOutputStation)
-            .Select(s => s.Index)
-            .ToList();
+            .Select(s => s.Index);
 
         foreach (var station in Stations.OrderByDescending(s => s.Index))
         {
@@ -120,7 +155,15 @@ public class PpcModel : IMathModel
     {
         if (station.IsInputStation)
         {
-            station.LeadTime = station.ProcessingTime;
+            if (station.HasBuffer)
+            {
+                station.LeadTime = 0;
+            }
+            else
+            {
+                station.LeadTime = station.ProcessingTime;
+            }
+
             return;
         }
 
@@ -157,10 +200,10 @@ public class PpcModel : IMathModel
         else
         {
             averageDemand = (float)station.StateTimeLine
-                .ToList()
                 .Select(t => Stations
                     .Where(s => s.Index > station.Index)
                     .Select(s => (s.Index, s.StateTimeLine.Single(st => st.Instant == t.Instant).Demand))
+                    // (Index, Demand) a un instant t
                     .Sum(couple => StationInputPrecedences[station.Index][couple.Index] * couple.Demand))
                 .Average();
         }
@@ -220,12 +263,17 @@ public class PpcModel : IMathModel
                 }
 
                 // Set replenishments and orders 
-                if (station.HasBuffer && station.TOY >= stationState.NetFlow)
+                if (station.TOY >= stationState.NetFlow)
                 {
-                    stationState.Replenishment = 1;
+                    if (!station.HasBuffer && station.IsOutputStation)
+                    {
+                        stationState.Replenishment = 1;
+                    }
+                    else if (station.HasBuffer)
+                    {
+                        stationState.Replenishment = 1;
+                    }
                 }
-
-                stationState.OrderAmount = stationState.Replenishment * (int)Math.Ceiling(station.TOG.Value - stationState.NetFlow);
 
                 var expectedOrderToArrive = (t >= station.LeadTime + 1) ?
                     station.StateTimeLine.ElementAt((int)Math.Ceiling(stationState.Instant - 1 - station.LeadTime!.Value)).OrderAmount : 0;
@@ -235,6 +283,13 @@ public class PpcModel : IMathModel
                     stationState.Buffer = station.StateTimeLine.ElementAt(stationState.Instant - 1).Buffer + expectedOrderToArrive
                                    - station.StateTimeLine.ElementAt(stationState.Instant - 1).Demand!.Value;
                 }
+
+                var parentAvailableBuffer = Stations.Where(s => s.Index < station.Index)
+                    .Select(s => (s.Index, s.StateTimeLine.Single(st => st.Instant == t).Buffer))
+                    .Sum(couple => StationInputPrecedences[station.Index][couple.Index] * couple.Buffer);
+
+                stationState.OrderAmount = stationState.Replenishment * Math.Min((int)Math.Ceiling(station.TOG.Value - stationState.NetFlow),
+                    parentAvailableBuffer);
             }
         }
 

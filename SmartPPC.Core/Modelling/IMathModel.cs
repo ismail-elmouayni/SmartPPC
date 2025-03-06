@@ -10,7 +10,7 @@ public interface IMathModel
     float? ObjectiveFunctionValue { get;}
     IEnumerable<Gene> ToGenes();
     void GenerateRandomSolution();
-    void SetDecisionVariableRandomly(int index);
+    void SetDecisionVariableRandomly(int stationIndex);
 }
 
 public enum MathModelStatus
