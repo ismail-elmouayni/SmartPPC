@@ -12,11 +12,14 @@ public class Station
     public int Index { get; set; }
     public float ProcessingTime { get; set; }
     public float? LeadTime { get; set; }
-
     public float? AverageDemand { get; set; }
- 
     public float? LeadTimeFactor { get; set; }
+    public int[]? DemandForecast { get; set; }
     public float? DemandVariability { get; set; }
+    public List<TimeIndexedStationState> FutureStates { get; set; }
+        = new();
+    public List<TimeIndexedPastState> PastStates { get; set; }
+        = new();
 
     public float? TOR
     {
@@ -56,49 +59,5 @@ public class Station
             return TOR + LeadTime * AverageDemand;
         }
     }
-
-    //public int TOR
-    //{
-    //    get
-    //    {
-    //        if (LeadTimeFactor == null || DemandVariability == null || AverageDemand == null)
-    //        {
-    //            throw new InvalidOperationException(
-    //                "LeadTimeFactor, DemandVariability and AverageDemand must be set before calculating TOR");
-    //        }
-
-    //        return (int)(LeadTime * AverageDemand * (LeadTimeFactor + LeadTimeFactor * DemandVariability));
-    //    }
-    //}
-
-    //public int TOG
-    //{
-    //    get
-    //    {
-    //        if (LeadTimeFactor == null || DemandVariability == null || AverageDemand == null)
-    //        {
-    //            throw new InvalidOperationException(
-    //                "LeadTimeFactor, DemandVariability and AverageDemand must be set before calculating TOG");
-    //        }
-
-    //        return TOY + (int)(LeadTime * AverageDemand * LeadTimeFactor);
-    //    }
-    //}
-
-    //public int TOY
-    //{
-    //    get
-    //    {
-    //        if (LeadTimeFactor == null || DemandVariability == null || AverageDemand == null)
-    //        {
-    //            throw new InvalidOperationException(
-    //                "LeadTimeFactor, DemandVariability and AverageDemand must be set before calculating TOY");
-    //        }
-
-    //        return TOR + (int)(LeadTime * AverageDemand);
-    //    }
-    //}
-
-    public List<TimeIndexedStationState> StateTimeLine { get; set; }
-        = new();
+   
 }

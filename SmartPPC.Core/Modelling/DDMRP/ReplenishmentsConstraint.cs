@@ -19,7 +19,7 @@ public class ReplenishmentsConstraint : IConstraint
                 "TOY is not defined for all stations. Math model must be resolved before verifying constraints");
         }
 
-        return _stations.All(s => s.StateTimeLine
+        return _stations.All(s => s.FutureStates
             .All(t => BigNumber * (t.Replenishment - 1) <= s.HasBufferInt * (s.TOY - t.NetFlow) &&
                       s.HasBufferInt * (s.TOY - t.NetFlow) <= BigNumber * t.Replenishment));
     }

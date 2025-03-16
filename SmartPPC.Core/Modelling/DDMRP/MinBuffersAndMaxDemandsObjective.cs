@@ -20,20 +20,23 @@ public class MinBuffersAndMaxDemandsObjective : IObjective
 
     public static double AverageBuffersLevel(IEnumerable<Station> stations)
     {
-        var criteriaValue = stations.Sum(s => s.HasBuffer ? s.StateTimeLine.Average(state => state.Buffer) : 0);
+        var criteriaValue = stations.Sum(s => s.HasBuffer ? s.FutureStates.Average(state => state.Buffer) : 0);
 
-        return criteriaValue;
+        return criteriaValue!.Value;
     }
 
     public static double AverageSatisfiedDemandsLevel(IEnumerable<Station> stations)
     {
-        if (stations.Any(s => s.AverageDemand is null))
-        {
-            throw new InvalidOperationException("Average demand and demand not fully calculated yet to determine " +
-                                                "satisfied demands");
-        }
-        
-        var criteriaValue =  stations.Sum(s => s.StateTimeLine.Sum(state => Math.Max(state.Demand!.Value - state.Buffer, 0)));
+        var outputStations = stations.Where(s => s.IsOutputStation).ToList();
+
+        //if (stations.Any(s => s.AverageDemand is null))
+        //{
+        //    throw new InvalidOperationException("Average demand and demand not fully calculated yet to determine " +
+        //                                        "satisfied demands");
+        //}
+
+        var criteriaValue = outputStations.Sum(s =>
+            s.FutureStates.Select(state => Math.Min(state.Demand.Value - state.Buffer.Value, 0)).Average());
 
         return criteriaValue;
     }

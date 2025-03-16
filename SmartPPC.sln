@@ -2,13 +2,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35013.160
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartPPC.Core", "SmartPPC.Core\SmartPPC.Core.csproj", "{D1B1C818-1C4C-4D92-B555-1F252B914669}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartPPC.Core", "SmartPPC.Core\SmartPPC.Core.csproj", "{D1B1C818-1C4C-4D92-B555-1F252B914669}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartPPC.ServiceDefaults", "SmartPPC.ServiceDefaults\SmartPPC.ServiceDefaults.csproj", "{CA3F5E79-B40A-4D06-B555-71DBEB6B8822}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartPPC.ServiceDefaults", "SmartPPC.ServiceDefaults\SmartPPC.ServiceDefaults.csproj", "{CA3F5E79-B40A-4D06-B555-71DBEB6B8822}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartPPC.AppHost", "SmartPPC.AppHost\SmartPPC.AppHost.csproj", "{3220A902-4A25-4664-BC24-740522B15427}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartPPC.AppHost", "SmartPPC.AppHost\SmartPPC.AppHost.csproj", "{3220A902-4A25-4664-BC24-740522B15427}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartPPC.Api", "SmartPPC.Api\SmartPPC.Api.csproj", "{39767A1D-E974-40D8-A933-134425F757FA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmartPPC.Api", "SmartPPC.Api\SmartPPC.Api.csproj", "{39767A1D-E974-40D8-A933-134425F757FA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

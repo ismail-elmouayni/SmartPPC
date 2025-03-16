@@ -1,0 +1,76 @@
+﻿@page
+@model SmartPPC.Api.Pages.SolverPageModel
+@{
+    ViewData["Title"] = "Solver Page";
+}
+
+<h1>Solver Page</h1>
+
+<form method="post">
+    <div>
+        <label for="PlanningHorizon">Planning Horizon:</label>
+        <input type="number" id="PlanningHorizon" name="PlanningHorizon" value="@Model.ModelInputs.PlanningHorizon" />
+    </div>
+    <div>
+        <label for="PeakHorizon">Peak Horizon:</label>
+        <input type="number" id="PeakHorizon" name="PeakHorizon" value="@Model.ModelInputs.PeakHorizon" />
+    </div>
+    <div>
+        <label for="PastHorizon">Past Horizon:</label>
+        <input type="number" id="PastHorizon" name="PastHorizon" value="@Model.ModelInputs.PastHorizon" />
+    </div>
+    <div>
+        <label for="StationDeclarations">Station Declarations:</label>
+        <textarea id="StationDeclarations" name="StationDeclarations">@Model.StationDeclarationsJson</textarea>
+    </div>
+    <button type="submit">Solve</button>
+</form>
+
+@if (Model.Result != null)
+{
+    <h2>Result</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Station Index</th>
+                <th>Processing Time</th>
+                <th>Initial Buffer</th>
+                <th>Past Buffer</th>
+                <th>Past Order Amount</th>
+                <th>Demand Variability</th>
+                <th>Demand Forecast</th>
+                <th>Next Stations Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var station in Model.Result.Stations)
+            {
+                var initialBuffer = Model.ModelInputs.StationDeclarations
+                    .FirstOrDefault(d => d.StationIndex == station.Index).InitialBuffer;
+
+                var pastBuffer = string.Join(", ", Model.ModelInputs.StationDeclarations
+                .FirstOrDefault(d => d.StationIndex == station.Index).PastBuffer);
+
+                var pastOrderAmount = string.Join(", ", Model.ModelInputs.StationDeclarations
+                    .FirstOrDefault(d => d.StationIndex == station.Index).PastOrderAmount);
+
+                var demandForecast = string.Join(", ", Model.ModelInputs.StationDeclarations
+                    .FirstOrDefault(d => d.StationIndex == station.Index).DemandForecast);
+
+                var nextStationsInput = string.Join(", ", Model.ModelInputs.StationDeclarations
+                .FirstOrDefault(d => d.StationIndex == station.Index).NextStationsInput.Select(i => $"({i.NextStationIndex}, {i.InputAmount})"));
+                
+                <tr>
+                    <td>@station.Index</td>
+                    <td>@station.ProcessingTime</td>
+                    <td>@Model.ModelInputs.StationDeclarations.FirstOrDefault(d =>d.StationIndex == station.Index).InitialBuffer</td>
+                    <td>@pastBuffer</td>
+                    <td>@pastOrderAmount</td>
+                    <td>@station.DemandVariability</td>
+                    <td>@demandForecast</td>
+                    <td>@nextStationsInput</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

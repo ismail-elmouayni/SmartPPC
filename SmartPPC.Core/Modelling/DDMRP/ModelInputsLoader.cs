@@ -29,8 +29,13 @@ namespace SmartPPC.Core.Modelling.DDMRP
 
                 var model = new PpcModel
                 {
-                    Stations = ImportStationsAndDemandInfo(configOptions.StationDeclarations, configOptions.PlanningHorizon).ToList(),
+                    Stations = ImportStationsAndDemandInfo(configOptions.StationDeclarations, 
+                        configOptions.PlanningHorizon,
+                        configOptions.PastHorizon).ToList(),
+
                     PeakHorizon = configOptions.PeakHorizon,
+                    PlanningHorizon = configOptions.PlanningHorizon,
+                    PastHorizon = configOptions.PastHorizon,
                     StationPrecedences = SetStationsPrecedences(configOptions.StationDeclarations),
                     StationInputPrecedences = SetStationsInputPrecedences(configOptions.StationDeclarations),
                     StationInitialBuffer = SetStationsInitialBuffer(configOptions.StationDeclarations)
@@ -113,8 +118,10 @@ namespace SmartPPC.Core.Modelling.DDMRP
             return stationsBuffersSizes;
         }
 
-        private static IOrderedEnumerable<Station> ImportStationsAndDemandInfo(List<StationDeclaration> stationDeclarations,
-            int planningHorizon)
+        private static IOrderedEnumerable<Station> ImportStationsAndDemandInfo(
+            List<StationDeclaration> stationDeclarations,
+            int planningHorizon,
+            int pastHorizon)
         {
             var inputStationsIndex = stationDeclarations.Where(d => d.NextStationsInput != null)
                 .SelectMany(d => d.NextStationsInput!.Select(ni => ni.NextStationIndex));
@@ -140,19 +147,21 @@ namespace SmartPPC.Core.Modelling.DDMRP
             }
 
             var stations = stationDeclarations
-                .Select(s => new Station
+                .Select(dec => new Station
                 {
-                    Index = s.StationIndex ?? throw new InvalidDataException("Station index of one of the station declaration not declared"),
-                    IsOutputStation = s.NextStationsInput is null,
-                    IsInputStation = !inputStationsIndex.Contains(s.StationIndex.Value),
-                    DemandVariability = s.DemandVariability,
-                    ProcessingTime = s.ProcessingTime ?? throw new InvalidDataException($"Processing time for station {s.StationIndex} not declared"),
+                    Index = dec.StationIndex ?? throw new InvalidDataException("Station index of one of the station declaration not declared"),
+                    IsOutputStation = dec.NextStationsInput is null,
+                    IsInputStation = !inputStationsIndex.Contains(dec.StationIndex.Value),
+                    DemandVariability = dec.DemandVariability,
+                    ProcessingTime = dec.ProcessingTime ?? throw new InvalidDataException($"Processing time for station {dec.StationIndex} not declared"),
+                    DemandForecast = dec.DemandForecast?.ToArray(),
 
-                    StateTimeLine = Enumerable.Range(0, planningHorizon)
-                        .Select(t => new TimeIndexedStationState
+                    PastStates = Enumerable.Range(0, pastHorizon)
+                        .Select(t => new TimeIndexedPastState
                         {
-                            Instant = t,
-                            Demand =  s.DemandForecast?.ElementAt(t)
+                            Instant = -pastHorizon+1+t,
+                            Buffer = dec.PastBuffer[t],
+                            OrderAmount = dec.PastOrderAmount[t]
                         })
                         .OrderBy(s => s.Instant)
                         .ToList()
