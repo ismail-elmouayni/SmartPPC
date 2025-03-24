@@ -287,10 +287,13 @@ public class PpcModel : IMathModel
                 Instant = 0
             });
 
+            // Set demand by propagation orders amounts in parent 
+            // stations. For output station, the demand is known (external)
+            SetStationDemandBasedOnOrders(station, 0);
+
             if (station.HasBuffer)
             {
-                station.FutureStates[0].Buffer = station.PastStates[0].Buffer;
-                station.FutureStates[0].OrderAmount = station.PastStates[0].OrderAmount;
+                station.FutureStates[0].Buffer = station.PastStates[0].Buffer; station.FutureStates[0].OrderAmount = station.PastStates[0].OrderAmount;
 
                 var incomingSupply = GetIncomingSupply(station, 0);
 
@@ -347,20 +350,28 @@ public class PpcModel : IMathModel
         }
 
         var sourceStation = Stations.Single(s => StationPrecedences[s.Index][station.Index] != 0);
-        if (!sourceStation.HasBuffer)
+        if (sourceStation is { HasBuffer: false, IsInputStation: false })
         {
             bool hasBufferOrInputStation = false;
 
             while (!hasBufferOrInputStation)
             {
-                Station preStation = Stations.Single(s => StationPrecedences[s.Index][sourceStation.Index] != 0);
-                sourceStation = preStation;
-                hasBufferOrInputStation = preStation.HasBuffer || preStation.IsInputStation;
+                Station? preStation = Stations.SingleOrDefault(s => StationPrecedences[s.Index][sourceStation.Index] != 0);
+
+                sourceStation = preStation ?? throw new InvalidOperationException("No input station found for station " + sourceStation.Index + 
+                                                                                  $" During station {station.Index} incoming supply calculation at t = {t}");
+                
+                hasBufferOrInputStation = sourceStation.HasBuffer || sourceStation.IsInputStation;
             }
         }
 
         if (t >= station.LeadTime + 1)
         {
+            if (sourceStation.IsInputStation)
+            {
+                return sourceStation.FutureStates[t].OrderAmount!.Value;
+            }
+
             return Math.Min(station.FutureStates[(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)].OrderAmount!.Value,
                  sourceStation.FutureStates[(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)].Buffer ?? 0);
         }
