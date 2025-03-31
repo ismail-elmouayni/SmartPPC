@@ -8,7 +8,6 @@ namespace SmartPPC.Core.Solver.GA;
 
 public class Solver : IPPCSolver
 {
-
     public Result<IMathModel?> GetMathModel(string configFilePath)
     {
         var importResult = ModelInputsLoader.ImportModelInputs(configFilePath);
@@ -27,6 +26,7 @@ public class Solver : IPPCSolver
         }
 
         var model = exResult.Value;
+
         try
         {
             var chromosome = new Chromosome(model);

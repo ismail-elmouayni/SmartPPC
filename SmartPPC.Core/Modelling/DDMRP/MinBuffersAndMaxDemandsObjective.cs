@@ -14,26 +14,34 @@ public class MinBuffersAndMaxDemandsObjective : IObjective
 
     public float? Evaluate()
     {
-        return (float)(BuffersOptimizationWeight * AverageBuffersLevel(_stations) +
-            DemandsOptimizationWeight * AverageSatisfiedDemandsLevel(_stations));
+        return (float)(BuffersOptimizationWeight * AverageBuffersLevel() +
+            DemandsOptimizationWeight * AverageSatisfiedDemandsLevel());
     }
 
-    public static double AverageBuffersLevel(IEnumerable<Station> stations)
+    public double AverageBuffersLevel()
     {
-        var criteriaValue = stations.Sum(s => s.HasBuffer ? s.FutureStates.Average(state => state.Buffer) : 0);
+        var criteriaValue = _stations.Sum(s => s.HasBuffer ? s.FutureStates.Average(state => state.Buffer) : 0);
 
         return criteriaValue!.Value;
     }
 
-    public static double AverageSatisfiedDemandsLevel(IEnumerable<Station> stations)
+    public double AverageSatisfiedDemandsLevel()
     {
-        var outputStations = stations.Where(s => s.IsOutputStation).ToList();
+        var outputStations = _stations.Where(s => s.IsOutputStation).ToList();
 
-        //if (stations.Any(s => s.AverageDemand is null))
-        //{
-        //    throw new InvalidOperationException("Average demand and demand not fully calculated yet to determine " +
-        //                                        "satisfied demands");
-        //}
+        if(outputStations.Count == 0)
+        {
+            throw new InvalidOperationException("No output stations found in the list of stations");
+        }
+
+        var invalidOutputStations = outputStations.Where(s => s.FutureStates.Any(state => state.Demand is null)
+            || s.FutureStates.Any(state => state.Buffer == null)).ToList();
+
+        if (invalidOutputStations.Any())
+        {
+            throw new InvalidOperationException($"at least one output station have either buffer or demand is null : " +
+                                                $" concerned station {string.Join(",", invalidOutputStations.Select(s => s.Index))}");
+        }
 
         var criteriaValue = outputStations.Sum(s =>
             s.FutureStates.Select(state => Math.Min(state.Demand.Value - state.Buffer.Value, 0)).Average());

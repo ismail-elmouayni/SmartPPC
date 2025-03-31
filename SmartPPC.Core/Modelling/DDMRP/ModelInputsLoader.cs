@@ -27,21 +27,25 @@ namespace SmartPPC.Core.Modelling.DDMRP
                     return Result.Fail<PpcModel>("No station declarations found in the model inputs file.");
                 }
 
-                var model = new PpcModel
-                {
-                    Stations = ImportStationsAndDemandInfo(configOptions.StationDeclarations, 
-                        configOptions.PlanningHorizon,
-                        configOptions.PastHorizon).ToList(),
+                var stations = ImportStationsAndDemandInfo(
+                    configOptions.StationDeclarations,
+                    configOptions.PlanningHorizon,
+                    configOptions.PastHorizon).ToList();
 
-                    PeakHorizon = configOptions.PeakHorizon,
-                    PlanningHorizon = configOptions.PlanningHorizon,
-                    PastHorizon = configOptions.PastHorizon,
-                    StationPrecedences = SetStationsPrecedences(configOptions.StationDeclarations),
-                    StationInputPrecedences = SetStationsInputPrecedences(configOptions.StationDeclarations),
-                    StationInitialBuffer = SetStationsInitialBuffer(configOptions.StationDeclarations)
-                };
+                var stationPrecedences = SetStationsPrecedences(configOptions.StationDeclarations);
+                var stationInputPrecedences = SetStationsInputPrecedences(configOptions.StationDeclarations);
+                var stationInitialBuffer = SetStationsInitialBuffer(configOptions.StationDeclarations);
 
-
+                var model = new PpcModel(
+                    stations: stations,
+                    stationPrecedences: stationPrecedences,
+                    stationInputPrecedences: stationInputPrecedences,
+                    stationInitialBuffer: stationInitialBuffer,
+                    peakHorizon: configOptions.PeakHorizon,
+                    planningHorizon: configOptions.PlanningHorizon,
+                    pastHorizon: configOptions.PastHorizon
+                    );
+                
                 return Result.Ok(model);
             }
             catch (Exception ex)

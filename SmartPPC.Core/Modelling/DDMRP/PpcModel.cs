@@ -63,12 +63,22 @@ public class PpcModel : IMathModel
         }
     }
 
-    public PpcModel()
+    public PpcModel(
+        List<Station> stations,
+        int planningHorizon,
+        int peakHorizon,
+        int pastHorizon,
+        int[] stationInitialBuffer,
+        int[][] stationPrecedences,
+        int[][] stationInputPrecedences)
     {
-        Stations = new List<Station>()
-        {
-
-        };
+        Stations = stations;
+        PlanningHorizon = planningHorizon;
+        PeakHorizon = peakHorizon;
+        PastHorizon = pastHorizon;
+        StationPrecedences = stationPrecedences;
+        StationInputPrecedences = stationInputPrecedences;
+        StationInitialBuffer = stationInitialBuffer;
 
         Constraints = new List<IConstraint>
         {
@@ -130,10 +140,11 @@ public class PpcModel : IMathModel
             SetLeadTimeFactorForStation(station);
         }
 
+        // t = 0
         SetInitialBufferAndOrdersAmount();
 
 
-        for (int t = 0; t < PlanningHorizon; t++)
+        for (int t = 1; t < PlanningHorizon; t++)
         {
             ComputeBuffersOrdersAndReplenishment(t);
         }
@@ -247,14 +258,8 @@ public class PpcModel : IMathModel
 
     public void SetStationQualifiedDemand(Station station, int t)
     {
-
-        //var peakDemand = station.DemandForecast.Select((d, i) => (d, i))
-        //    .Where(couple => couple.i >= t && couple.i - t <= PeakHorizon)
-        //    .Select(couple => couple.d)
-        //    .SingleOrDefault(d => d >= t * station.TOR);
-
         int? peakDemand = null;
-        for (var i = t; i < t + PeakHorizon; i++)
+        for (var i = t; i < t + PeakHorizon && i < PlanningHorizon ; i++)
         {
             if (station.DemandForecast[i] >= (i - t + 1) * station.TOR)
             {
@@ -262,11 +267,6 @@ public class PpcModel : IMathModel
                 break;
             }
         }
-
-        //var peakDemand = station.DemandForecast.Select(d => I)
-        //    .SingleOrDefault(s => s.Instant >= t &&
-        //                         s.Instant - t <= PeakHorizon &&
-        //                         s.Demand >= t * station.TOR)?.Demand;
 
         if (peakDemand.HasValue)
         {
@@ -282,20 +282,30 @@ public class PpcModel : IMathModel
     {
         foreach (var station in Stations.OrderByDescending(s => s.Index))
         {
-            station.FutureStates.Add(new TimeIndexedStationState
+            var state = station.FutureStates.FirstOrDefault(s => s.Instant == 0);
+            if (state == null)
             {
-                Instant = 0
-            });
+                station.FutureStates.Add( new TimeIndexedStationState
+                {
+                    Instant = 0
+                });
+            }
+            else
+            {
+                station.FutureStates[0] = new TimeIndexedStationState
+                {
+                    Instant = 0
+                };
+            }
 
-            // Set demand by propagation orders amounts in parent 
-            // stations. For output station, the demand is known (external)
             SetStationDemandBasedOnOrders(station, 0);
+            SetStationQualifiedDemand(station, 0);
 
             if (station.HasBuffer)
             {
                 station.FutureStates[0].Buffer = station.PastStates[0].Buffer; station.FutureStates[0].OrderAmount = station.PastStates[0].OrderAmount;
 
-                var incomingSupply = GetIncomingSupply(station, 0);
+                var incomingSupply = GetIncomingSupply(station, -1);
 
                 station.FutureStates[0].OnOrderInventory =
                     -incomingSupply + station.PastStates[0].OrderAmount;
@@ -303,14 +313,27 @@ public class PpcModel : IMathModel
         }
     }
 
+
     public void ComputeBuffersOrdersAndReplenishment(int t)
     {
         foreach (var station in Stations.OrderByDescending(s => s.Index))
         {
-            station.FutureStates.Add(new TimeIndexedStationState
+            var state = station.FutureStates.FirstOrDefault(s => s.Instant == t);
+
+            if (state == null)
             {
-                Instant = t + 1
-            });
+                station.FutureStates.Add(new TimeIndexedStationState
+                {
+                    Instant = t
+                });
+            }
+            else
+            {
+                station.FutureStates[t] = new TimeIndexedStationState
+                {
+                    Instant = t
+                };
+            }
 
             // Set demand by propagation orders amounts in parent 
             // stations. For output station, the demand is known (external)
@@ -320,21 +343,31 @@ public class PpcModel : IMathModel
             {
                 SetStationQualifiedDemand(station, t);
 
-                if (station.TOY >= station.FutureStates[t].NetFlow)
+                if (station.TOY >= station.FutureStates[t-1].NetFlow)
                 {
-                    station.FutureStates[t + 1].Replenishment = 1;
+                    station.FutureStates[t].Replenishment = 1;
                 }
 
-                station.FutureStates[t + 1].OrderAmount = station.FutureStates[t + 1].Replenishment ?? 0 *
+                station.FutureStates[t].OrderAmount = station.FutureStates[t].Replenishment ?? 0 *
                                                       (int)Math.Ceiling(station.TOG.Value - station.FutureStates[t].NetFlow.Value);
-
-                var incomingSupply = GetIncomingSupply(station, t);
+                
+                int incomingSupply;
+                try
+                {
+                    incomingSupply = GetIncomingSupply(station, t-1);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+                
                 // Buffer
-                station.FutureStates[t + 1].Buffer = station.FutureStates[t].Buffer - station.FutureStates[t].Demand
+                station.FutureStates[t].Buffer = station.FutureStates[t-1].Buffer - station.FutureStates[t-1].Demand
                                                  + incomingSupply;
                 // InOrderInventory
-                station.FutureStates[t + 1].OnOrderInventory = station.FutureStates[t].OnOrderInventory
-                    - incomingSupply + station.FutureStates[t].OrderAmount;
+                station.FutureStates[t].OnOrderInventory = station.FutureStates[t-1].OnOrderInventory
+                    - incomingSupply + station.FutureStates[t-1].OrderAmount;
             }
         }
     }
@@ -369,11 +402,20 @@ public class PpcModel : IMathModel
         {
             if (sourceStation.IsInputStation)
             {
-                return sourceStation.FutureStates[t].OrderAmount!.Value;
+                return station.FutureStates[(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)].OrderAmount ?? 
+                       throw new InvalidOperationException($"past order amount for station {station.Index} at {(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)}" +
+                                                           $"were not calculated yet at {t} to get incoming supply" );
             }
 
-            return Math.Min(station.FutureStates[(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)].OrderAmount!.Value,
-                 sourceStation.FutureStates[(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)].Buffer ?? 0);
+            int stationOrderAmount =  station.FutureStates[(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)].OrderAmount ??
+                                      throw new InvalidOperationException($"past order amount for station {station.Index} at {(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)}" +
+                                                                          $"were not calculated yet at {t} to get incoming supply");
+            
+            int sourceStationBuffer = station.FutureStates[(int)Math.Ceiling(t - 1 - station.LeadTime!.Value)].Buffer ??
+                                      throw new InvalidOperationException($"source {sourceStation.Index} at supplying {station.Index} should have buffer" +
+                                                                          $"Calculating incoming supply at {t}");
+            return Math.Min(sourceStationBuffer, stationOrderAmount);   
+
         }
         else
         {
