@@ -19,14 +19,12 @@ public class Fitness : IFitness
 
         foreach (var constraint in _model.Constraints)
         {
+            // TODO : penality not working properly
             if (!constraint.IsVerified())
             {
                 penalty += 1000; // Pénalité pour les solutions non faisables
             }
         }
-
-        //double objectiveValue = EvaluateExpression(_model.Objective.Expression, solution);
-        //return _model.Objective.Maximize ? objectiveValue - penalty : objectiveValue + penalty;
 
         return (double) solution.ObjectiveFunctionValue;
     }
