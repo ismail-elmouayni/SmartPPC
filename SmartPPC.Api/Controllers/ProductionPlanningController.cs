@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SmartPPC.Core.Solver;
+using SmartPPC.Core.Solver.GA;
 
 namespace Api.Controllers;
 
@@ -31,6 +32,7 @@ public class ProductionPlanningController : ControllerBase
     {
         var exResult = _solver.Resolve(); 
 
-        return  exResult.IsSuccess ? Results.Ok(exResult.Value) : Results.Problem(string.Join(",", exResult.Errors));
+        return  exResult.IsSuccess ? Results.Ok(exResult.Value) :
+            Results.Problem(string.Join(",", exResult.Errors));
     }
 }

@@ -8,6 +8,7 @@ public class Fitness : IFitness
 {
     private IMathModel _model;
 
+    public List<double> Curve = new List<double>();
     public Fitness(IMathModel model) => _model = model;
 
     public double Evaluate(IChromosome chromosome)
@@ -26,7 +27,10 @@ public class Fitness : IFitness
             }
         }
 
-        return (double) solution.ObjectiveFunctionValue;
+        var fitnessValue = (double) solution.ObjectiveFunctionValue;
+        Curve.Add(fitnessValue);
+
+        return fitnessValue;
     }
 
     public bool EvaluateConstraint(string expression, Dictionary<string, double> solution)

@@ -15,7 +15,7 @@ namespace SmartPPC.Api.Pages
         [BindProperty]
         public string StationDeclarationsJson { get; set; } = string.Empty;
 
-        public PpcModel? Result { get; set; }
+        public OptimizationResult? Result { get; set; }
 
         public void OnGet()
         {
@@ -40,7 +40,7 @@ namespace SmartPPC.Api.Pages
 
             if (result.IsSuccess)
             {
-                Result = result.Value as PpcModel;
+                Result = result.Value as OptimizationResult;
             }
             else
             {

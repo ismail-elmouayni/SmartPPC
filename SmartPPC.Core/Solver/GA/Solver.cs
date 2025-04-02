@@ -12,17 +12,18 @@ public class Solver : IPPCSolver
     {
         var importResult = ModelInputsLoader.ImportModelInputs(configFilePath);
 
-        return importResult.IsSuccess ? 
-            Result.Ok((IMathModel?) importResult.Value) : Result.Fail<IMathModel?>(importResult.Errors);
+        return importResult.IsSuccess
+            ? Result.Ok((IMathModel?)importResult.Value)
+            : Result.Fail<IMathModel?>(importResult.Errors);
     }
 
-    public Result<IMathModel> Resolve(string configFilePath)
+    public Result<OptimizationResult> Resolve(string configFilePath)
     {
         var exResult = GetMathModel(configFilePath);
 
         if (exResult.IsFailed)
         {
-            return Result.Fail<IMathModel>(exResult.Errors);
+            return Result.Fail<OptimizationResult>(exResult.Errors);
         }
 
         var model = exResult.Value;
@@ -47,7 +48,11 @@ public class Solver : IPPCSolver
             var bestChromosome = ga.BestChromosome as Chromosome;
             var bestSolution = bestChromosome.GetSolution();
 
-            return Result.Ok(bestSolution);
+            var bestGenes = bestChromosome.GetGenes();
+
+
+            return Result.Ok(new OptimizationResult(bestSolution.ToGenes().Select(g => (int)g.Value), 
+                fitness.Curve.Distinct().OrderByDescending(e => e)));
         }
 
         catch (Exception ex)
@@ -55,48 +60,4 @@ public class Solver : IPPCSolver
             return Result.Fail($"An error occured while solving the problem : {ex.Message}");
         }
     }
-
-    // Not used right now 
-    //public Result<IMathModel> GetGenericMathModel(string configFilePath)
-    //{
-    //    var jsonObject = JObject.Parse(File.ReadAllText(configFilePath));
-
-    //    var constraints = jsonObject["constraints"]?.ToObject<List<Constraint>>();
-    //    var objective = jsonObject["objective"]?.ToObject<Objective>();
-    //    var variablesToken = jsonObject["variables"];
-
-    //    if (objective == null)
-    //    {
-    //        Result.Fail<MathModel?>("Objective is missing in MathModel config file");
-    //    }
-
-    //    if (constraints == null)
-    //    {
-    //        Result.Fail<MathModel?>("Constraints are missing in MathModel config file. " +
-    //                                "Event if there is no constraints, constraints section should be added and empty");
-    //    }
-
-    //    if (variablesToken == null || !variablesToken.Any())
-    //    {
-    //        Result.Fail<MathModel?>("Variables are missing in MathModel config file");
-    //    }
-
-
-    //    var variables = (from variableToken in variablesToken
-    //                     let variableType = variableToken["variable_type"]?.ToString()
-    //                     select variableType switch
-    //                     {
-    //                         "indexed" => variableToken.ToObject<IndexedVariable>(),
-    //                         "time_indexed" => variableToken.ToObject<TimeIndexedVariable>(),
-    //                         _ => variableToken.ToObject<Variable>()
-
-    //                     }).ToList();
-
-    //    return Result.Ok(new MathModel
-    //    {
-    //        Variables = variables,
-    //        //Constraints = constraints,
-    //        ObjectiveFunction = objective
-    //    });
-    //}
 }

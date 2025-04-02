@@ -32,45 +32,16 @@
     <table>
         <thead>
             <tr>
-                <th>Station Index</th>
-                <th>Processing Time</th>
-                <th>Initial Buffer</th>
-                <th>Past Buffer</th>
-                <th>Past Order Amount</th>
-                <th>Demand Variability</th>
-                <th>Demand Forecast</th>
-                <th>Next Stations Input</th>
+                <th>GENES</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var station in Model.Result.Stations)
-            {
-                var initialBuffer = Model.ModelInputs.StationDeclarations
-                    .FirstOrDefault(d => d.StationIndex == station.Index).InitialBuffer;
-
-                var pastBuffer = string.Join(", ", Model.ModelInputs.StationDeclarations
-                .FirstOrDefault(d => d.StationIndex == station.Index).PastBuffer);
-
-                var pastOrderAmount = string.Join(", ", Model.ModelInputs.StationDeclarations
-                    .FirstOrDefault(d => d.StationIndex == station.Index).PastOrderAmount);
-
-                var demandForecast = string.Join(", ", Model.ModelInputs.StationDeclarations
-                    .FirstOrDefault(d => d.StationIndex == station.Index).DemandForecast);
-
-                var nextStationsInput = string.Join(", ", Model.ModelInputs.StationDeclarations
-                .FirstOrDefault(d => d.StationIndex == station.Index).NextStationsInput.Select(i => $"({i.NextStationIndex}, {i.InputAmount})"));
-                
-                <tr>
-                    <td>@station.Index</td>
-                    <td>@station.ProcessingTime</td>
-                    <td>@Model.ModelInputs.StationDeclarations.FirstOrDefault(d =>d.StationIndex == station.Index).InitialBuffer</td>
-                    <td>@pastBuffer</td>
-                    <td>@pastOrderAmount</td>
-                    <td>@station.DemandVariability</td>
-                    <td>@demandForecast</td>
-                    <td>@nextStationsInput</td>
-                </tr>
-            }
-        </tbody>
+                @foreach (var gene in @Model.Result.BestGenes)
+                {
+                    <td>
+                        gene
+                    </td>
+                }
+    </tbody>
     </table>
 }
