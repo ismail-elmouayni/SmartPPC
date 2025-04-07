@@ -180,6 +180,7 @@ namespace SmartPPC.Core.Model.DDMRP
                     Index = dec.StationIndex ?? throw new InvalidDataException("Station index of one of the station declaration not declared"),
                     IsOutputStation = dec.NextStationsInput is null,
                     IsInputStation = !inputStationsIndex.Contains(dec.StationIndex.Value),
+                    LeadTime = !inputStationsIndex.Contains(dec.StationIndex.Value) ? dec.LeadTime : null,
                     DemandVariability = dec.DemandVariability,
                     ProcessingTime = dec.ProcessingTime ?? throw new InvalidDataException($"Processing time for station {dec.StationIndex} not declared"),
                     DemandForecast = dec.DemandForecast?.ToArray(),

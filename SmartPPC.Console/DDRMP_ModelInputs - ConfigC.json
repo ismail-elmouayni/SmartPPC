@@ -6,6 +6,7 @@
     {
       "StationIndex": 0,
       "ProcessingTime": 0.01,
+      "LeadTime": 2,
       "InitialBuffer": 20,
       "PastBuffer": [ 0, 0, 0 ],
       "PastOrderAmount": [ 0, 0, 0 ],

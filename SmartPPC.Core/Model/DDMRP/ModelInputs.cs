@@ -14,6 +14,7 @@ public class ModelInputs
 public record StationDeclaration(
     int? StationIndex,
     float? ProcessingTime,
+    float? LeadTime,
     int? InitialBuffer,
     int[] PastBuffer,
     int[] PastOrderAmount,

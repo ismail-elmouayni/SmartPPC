@@ -105,7 +105,6 @@ public class ProductionControlModel : IProductionControlModel
             
             if (station.IsOutputStation)
             {
-                station.HasBuffer = true;
                 continue;
             }
 
@@ -159,7 +158,11 @@ public class ProductionControlModel : IProductionControlModel
     {
         if (stationModel.IsInputStation)
         {
-            stationModel.LeadTime = stationModel.ProcessingTime;
+            if (stationModel.LeadTime == null)
+            {
+                throw new InvalidOperationException(
+                    "Lead time for input station " + stationModel.Index + " is not set");
+            }
             return;
         }
 
@@ -355,10 +358,24 @@ public class ProductionControlModel : IProductionControlModel
     {
         if (stationModel.IsInputStation)
         {
-            return t < 0
-                ? stationModel.PastStates.FirstOrDefault(s => s.Instant == (int)Math.Ceiling(-t + stationModel.LeadTime.Value))
-                    ?.OrderAmount ?? 0
-                : stationModel.FutureStates[t].Demand!.Value;
+            if ((int)Math.Ceiling(t - stationModel.LeadTime!.Value) < 0)
+            {
+                return stationModel.PastStates
+                    .FirstOrDefault(s => s.Instant == (int)Math.Ceiling(-t + stationModel.LeadTime.Value))
+                    ?.OrderAmount ?? 0;
+            }
+            else
+            {
+                if (stationModel.HasBuffer)
+                {
+                    return stationModel.FutureStates
+                        .FirstOrDefault(s => s.Instant == (int)Math.Ceiling(t - stationModel.LeadTime.Value))
+                        ?.OrderAmount ?? 0;
+                }
+
+                return stationModel.FutureStates[t].Demand!.Value;
+            }
+                
         }
 
         var sourceStation = Stations.Single(s => StationPrecedences[s.Index][stationModel.Index] != 0);
