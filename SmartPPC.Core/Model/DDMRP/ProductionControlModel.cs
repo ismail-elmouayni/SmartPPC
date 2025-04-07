@@ -96,48 +96,18 @@ public class ProductionControlModel : IProductionControlModel
             .Select(s => new Gene(s.HasBufferInt));
     }
 
-    public void SetDecisionVariableRandomly(int stationIndex)
-    {
-        if (Status < ControlModelStatus.Initialized)
-        {
-            throw new InvalidOperationException(
-                $"Model not initialized to regenerate a new buffer config for position {stationIndex}");
-        }
-
-        var station = Stations.Single(s => s.Index == stationIndex);
-
-        var value = new Random().Next(0, 2);
-        station.HasBuffer = (value == 1);
-
-        ReGenerateSolutionIfBuffersModified();
-    }
-
     public void PlanBasedOnBuffersPositions(int[] buffersActivation)
     {
-        var forcedBuffers = new List<int>{0,1,2,3,5,6};
         foreach (var station in Stations.OrderByDescending(s => s.Index))
         {
             SetAverageDemandForStation(station);
-
+            station.HasBuffer = buffersActivation[station.Index] == 1;
+            
             if (station.IsOutputStation)
             {
                 station.HasBuffer = true;
                 continue;
             }
-
-            station.HasBuffer = buffersActivation[station.Index] == 1;
-
-            //if (forcedBuffers.Contains(station.Index))
-            //{
-            //    station.HasBuffer = true;
-            //}
-            //else
-            //{
-            //    station.HasBuffer = false;
-            //}
-
-            //var hasBuffer = new Random().Next(0, 2);
-            //station.HasBuffer = (hasBuffer == 1);
 
             SetDemandVariabilityForStation(station);
         }

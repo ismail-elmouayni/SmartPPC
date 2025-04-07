@@ -31,16 +31,17 @@ public class Program
 
         var buffersActivation = optResult.Value.Solution.ToGenes()
             .Select(g => (int)g.Value);
+        var fitnessCurve = optResult.Value.FitnessCurve;
         var solution = optResult.Value.Solution;
 
         var printText = $"Optimal Genes {string.Join(",",buffersActivation)}\n" +
-                        $"Fitness curve : {string.Join(",", optResult.Value.FitnessCurve)}" +
+                        $"Fitness curve : {string.Join(",", fitnessCurve)}" +
                         $"Average buffers level : {string.Join(",", solution.GetAverageBuffersLevel())}" +
                         $"Average not satisfied demand : {string.Join(",", solution.GetAverageNotSatisfiedDemand())}";
 
         File.WriteAllText("result", printText);
 
-        ResultsSaver.SaveResultsToCsv("./Results",(ProductionControlModel)solution);
+        ResultsSaver.SaveResultsToCsv("./Results",(ProductionControlModel)solution, fitnessCurve);
         System.Console.Write(printText);
         System.Console.Read();
     }

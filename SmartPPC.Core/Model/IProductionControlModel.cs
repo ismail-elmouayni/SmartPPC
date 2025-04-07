@@ -11,7 +11,6 @@ public interface IProductionControlModel
     float? ObjectiveFunctionValue { get;}
     IEnumerable<Gene> ToGenes();
     void PlanBasedOnBuffersPositions(int[] buffersActivation);
-    void SetDecisionVariableRandomly(int stationIndex);
     float GetAverageBuffersLevel();
     float GetAverageNotSatisfiedDemand();
 

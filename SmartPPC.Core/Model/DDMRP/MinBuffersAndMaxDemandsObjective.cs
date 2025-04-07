@@ -3,7 +3,7 @@
 public class MinBuffersAndMaxDemandsObjective : IObjective
 {
     public float BuffersOptimizationWeight { get; set; } = 0.5f;
-    public float DemandsOptimizationWeight { get; set; } = 100f;
+    public float DemandsOptimizationWeight { get; set; } = 10f;
     public float BufferActivationCost { get; set; } = 0.1f;
 
 

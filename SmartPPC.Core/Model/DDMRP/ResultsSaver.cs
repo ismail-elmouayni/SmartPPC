@@ -4,8 +4,11 @@ namespace SmartPPC.Core.Model.DDMRP;
 
 public class ResultsSaver
 {
-    public static void SaveResultsToCsv(string directoryPath,
-        ProductionControlModel solution)
+    public static void SaveResultsToCsv(
+        string directoryPath,
+        ProductionControlModel solution,
+        IEnumerable<double> fitnessCurve)
+
     {
         if (!Directory.Exists(directoryPath))
         {
@@ -24,5 +27,11 @@ public class ResultsSaver
             csv.WriteRecords(station.FutureStates);
             csv.NextRecord();
         }
+
+        var fitnessFilePath = Path.Combine(directoryPath, "fitness.csv");
+        using var fitnessWriter = new StreamWriter(fitnessFilePath);
+        using var fitnessCsv = new CsvHelper.CsvWriter(fitnessWriter, CultureInfo.CurrentCulture);
+
+        fitnessCsv.WriteRecords(fitnessCurve);
     }
 }
