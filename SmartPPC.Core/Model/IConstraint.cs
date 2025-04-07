@@ -1,4 +1,4 @@
-﻿namespace SmartPPC.Core.Modelling;
+﻿namespace SmartPPC.Core.Model;
 
 public interface IConstraint
 {

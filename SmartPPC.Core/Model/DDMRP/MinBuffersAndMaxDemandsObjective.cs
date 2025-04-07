@@ -1,13 +1,15 @@
-﻿namespace SmartPPC.Core.Modelling.DDMRP;
+﻿namespace SmartPPC.Core.Model.DDMRP;
 
 public class MinBuffersAndMaxDemandsObjective : IObjective
 {
     public float BuffersOptimizationWeight { get; set; } = 0.5f;
-    public float DemandsOptimizationWeight { get; set; } = 0.5f;
+    public float DemandsOptimizationWeight { get; set; } = 100f;
+    public float BufferActivationCost { get; set; } = 0.1f;
 
-    private readonly IEnumerable<Station> _stations;
 
-    public MinBuffersAndMaxDemandsObjective(IEnumerable<Station> stations)
+    private readonly IEnumerable<StationModel> _stations;
+
+    public MinBuffersAndMaxDemandsObjective(IEnumerable<StationModel> stations)
     {
         _stations = stations;
     }
@@ -15,7 +17,8 @@ public class MinBuffersAndMaxDemandsObjective : IObjective
     public float? Evaluate()
     {
         return (float)(BuffersOptimizationWeight * AverageBuffersLevel() +
-            DemandsOptimizationWeight * AverageSatisfiedDemandsLevel());
+                       DemandsOptimizationWeight * AverageSatisfiedDemandsLevel() + 
+                       BufferActivationCost * GetNumberOfActivatedBuffer());
     }
 
     public double AverageBuffersLevel()
@@ -44,8 +47,11 @@ public class MinBuffersAndMaxDemandsObjective : IObjective
         }
 
         var criteriaValue = outputStations.Sum(s =>
-            s.FutureStates.Select(state => Math.Min(state.Demand.Value - state.Buffer.Value, 0)).Average());
+            s.FutureStates.Select(state => Math.Max(state.Demand.Value - state.Buffer.Value, 0)).Average());
 
         return criteriaValue;
     }
+
+    public int GetNumberOfActivatedBuffer()
+        => _stations.Where(s => s.HasBuffer).Count();
 }

@@ -1,4 +1,4 @@
-﻿namespace SmartPPC.Core.Modelling.DDMRP;
+﻿namespace SmartPPC.Core.Model.DDMRP;
 
 public sealed class TimeIndexedStationState
 {

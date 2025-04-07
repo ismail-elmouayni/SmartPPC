@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel;
 
-namespace SmartPPC.Core.Modelling.DDMRP;
+namespace SmartPPC.Core.Model.DDMRP;
 
-public class Station
+public class StationModel
 {
     [Description("decision-variable")]
     public bool HasBuffer { get; set; }

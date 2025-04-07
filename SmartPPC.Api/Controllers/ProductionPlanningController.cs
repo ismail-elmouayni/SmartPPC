@@ -9,10 +9,10 @@ namespace Api.Controllers;
 public class ProductionPlanningController : ControllerBase
 {
     private readonly ILogger<ProductionPlanningController> _logger;
-    private readonly IPPCSolver _solver;
+    private readonly IProductionControlSolver _solver;
 
     public ProductionPlanningController(
-        IPPCSolver solver,
+        IProductionControlSolver solver,
         ILogger<ProductionPlanningController> logger)
     {
         _logger = logger;
@@ -22,7 +22,7 @@ public class ProductionPlanningController : ControllerBase
     [HttpGet("math-model")]
     public IResult GetMathModel()
     {
-       var getResult = _solver.GetMathModel();
+       var getResult = _solver.GetModel();
 
        return getResult.IsSuccess ? Results.Ok(getResult.Value) : Results.Problem(string.Join(",", getResult.Errors));
     }
@@ -30,6 +30,12 @@ public class ProductionPlanningController : ControllerBase
     [HttpGet("resolve")]
     public IResult ResolvePlanning()
     {
+        var initResult = _solver.Initialize();
+        if (initResult.IsFailed)
+        {
+            return Results.Problem(string.Join(",", initResult.Errors));
+        }
+
         var exResult = _solver.Resolve(); 
 
         return  exResult.IsSuccess ? Results.Ok(exResult.Value) :

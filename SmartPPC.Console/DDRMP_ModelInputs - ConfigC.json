@@ -65,15 +65,7 @@
         {
           "NextStationIndex": 6,
           "InputAmount": 1
-        }
-      ]
-    },
-    {
-      "StationIndex": 5,
-      "ProcessingTime": 0.02,
-      "PastBuffer": [ 0, 0, 0 ],
-      "PastOrderAmount": [ 0, 0, 0 ],
-      "NextStationsInput": [
+        },
         {
           "NextStationIndex": 7,
           "InputAmount": 1
@@ -81,8 +73,8 @@
       ]
     },
     {
-      "StationIndex": 6,
-      "ProcessingTime": 0.02,
+      "StationIndex": 5,
+      "ProcessingTime": 0.03,
       "PastBuffer": [ 0, 0, 0 ],
       "PastOrderAmount": [ 0, 0, 0 ],
       "NextStationsInput": [
@@ -93,8 +85,8 @@
       ]
     },
     {
-      "StationIndex": 7,
-      "ProcessingTime": 0.02,
+      "StationIndex": 6,
+      "ProcessingTime": 0.03,
       "PastBuffer": [ 0, 0, 0 ],
       "PastOrderAmount": [ 0, 0, 0 ],
       "NextStationsInput": [
@@ -105,8 +97,8 @@
       ]
     },
     {
-      "StationIndex": 8,
-      "ProcessingTime": 0.02,
+      "StationIndex": 7,
+      "ProcessingTime": 0.03,
       "PastBuffer": [ 0, 0, 0 ],
       "PastOrderAmount": [ 0, 0, 0 ],
       "NextStationsInput": [
@@ -117,82 +109,157 @@
       ]
     },
     {
+      "StationIndex": 8,
+      "ProcessingTime": 0.03,
+      "PastBuffer": [ 0, 0, 0 ],
+      "PastOrderAmount": [ 0, 0, 0 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 11,
+          "InputAmount": 1
+        }
+      ]
+    },
+    {
       "StationIndex": 9,
-      "ProcessingTime": 0.02,
-      "DemandVariability": 17,
-      "DemandForecast": [
-        40,
-        15,
-        25,
-        60,
-        75,
-        35,
-        53,
-        22,
-        30,
-        60,
-        65,
-        40,
-        25,
-        35,
-        53,
-        65,
-        50,
-        40,
-        25,
-        40,
-        22,
-        35,
-        53,
-        65,
-        50,
-        53,
-        22,
-        16,
-        53,
-        22
-      ],
-      "PastBuffer": [ 15, 15, 15 ],
-      "PastOrderAmount": [ 10, 10, 10 ]
+      "ProcessingTime": 0.03,
+      "PastBuffer": [ 0, 0, 0 ],
+      "PastOrderAmount": [ 0, 0, 0 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 12,
+          "InputAmount": 1
+        }
+      ]
     },
     {
       "StationIndex": 10,
-      "ProcessingTime": 0.02,
-      "DemandVariability": 17,
+      "ProcessingTime": 0.03,
+      "PastBuffer": [ 0, 0, 0 ],
+      "PastOrderAmount": [ 0, 0, 0 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 13,
+          "InputAmount": 1
+        }
+      ]
+    },
+    {
+      "StationIndex": 11,
+      "ProcessingTime": 0.03,
+      "DemandVariability": 11,
       "DemandForecast": [
+        26,
+        10,
+        17,
         40,
+        50,
+        24,
+        36,
         15,
-        25,
-        60,
-        75,
-        35,
-        53,
-        22,
-        30,
-        60,
-        65,
+        20,
         40,
-        25,
-        35,
-        53,
-        65,
-        50,
-        40,
-        25,
-        40,
-        22,
-        35,
-        53,
-        65,
-        50,
-        53,
-        22,
-        16,
-        53,
-        22
+        44,
+        27,
+        17,
+        24,
+        37,
+        44,
+        34,
+        27,
+        17,
+        27,
+        15,
+        24,
+        36,
+        44,
+        34,
+        36,
+        15,
+        11,
+        36,
+        15
       ],
-      "PastBuffer": [ 15, 15, 15 ],
-      "PastOrderAmount": [ 10, 10, 10 ]
+      "PastBuffer": [ 10, 10, 10 ],
+      "PastOrderAmount": [ 7, 7, 7 ]
+    },
+    {
+      "StationIndex": 12,
+      "ProcessingTime": 0.03,
+      "DemandVariability": 11,
+      "DemandForecast": [
+        26,
+        10,
+        17,
+        40,
+        50,
+        24,
+        36,
+        15,
+        20,
+        40,
+        44,
+        27,
+        17,
+        24,
+        37,
+        44,
+        34,
+        27,
+        17,
+        27,
+        15,
+        24,
+        36,
+        44,
+        34,
+        36,
+        15,
+        11,
+        36,
+        15
+      ],
+      "PastBuffer": [ 10, 10, 10 ],
+      "PastOrderAmount": [ 7, 7, 7 ]
+    },
+    {
+      "StationIndex": 13,
+      "ProcessingTime": 0.03,
+      "DemandVariability": 11,
+      "DemandForecast": [
+        26,
+        10,
+        17,
+        40,
+        50,
+        24,
+        36,
+        15,
+        20,
+        40,
+        44,
+        27,
+        17,
+        24,
+        37,
+        44,
+        34,
+        27,
+        17,
+        27,
+        15,
+        24,
+        36,
+        44,
+        34,
+        36,
+        15,
+        11,
+        36,
+        15
+      ],
+      "PastBuffer": [ 10, 10, 10 ],
+      "PastOrderAmount": [ 7, 7, 7 ]
     }
   ]
 }

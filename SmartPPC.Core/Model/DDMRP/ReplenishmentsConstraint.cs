@@ -1,12 +1,12 @@
-﻿namespace SmartPPC.Core.Modelling.DDMRP;
+﻿namespace SmartPPC.Core.Model.DDMRP;
 
 public class ReplenishmentsConstraint : IConstraint
 {
-    private readonly IEnumerable<Station> _stations;
+    private readonly IEnumerable<StationModel> _stations;
 
     public float BigNumber = 1000f;
 
-    public ReplenishmentsConstraint(IEnumerable<Station> stations)
+    public ReplenishmentsConstraint(IEnumerable<StationModel> stations)
     {
         _stations = stations;
     }

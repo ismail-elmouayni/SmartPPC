@@ -1,57 +1,81 @@
 ﻿using FluentResults;
 using Newtonsoft.Json;
 
-namespace SmartPPC.Core.Modelling.DDMRP
+namespace SmartPPC.Core.Model.DDMRP
 {
-    public class ModelInputsLoader
+    public class ModelBuilder
     {
-        /// <summary>
-        /// Import model input, such as station declarations, planning horizon etc. from config file
-        /// </summary>
-        /// <param name="configFilePath"> JSON Configuration file.</param>
-        /// <returns> Configured <see cref="PpcModel"/></returns>
-        public static Result<PpcModel> ImportModelInputs(string configFilePath)
+        public static Result<ModelInputs> GetInputsFromFile(string modelInputsFilePath)
         {
             try
             {
-                string jsonContent = File.ReadAllText(configFilePath);
-                var configOptions = JsonConvert.DeserializeObject<ModelInputs>(jsonContent);
+                string jsonContent = File.ReadAllText(modelInputsFilePath);
+                var inputs = JsonConvert.DeserializeObject<ModelInputs>(jsonContent);
 
-                if (configOptions == null)
+                if (inputs == null)
                 {
-                    return Result.Fail<PpcModel>("Failed to read model inputs from json file.");
+                    return Result.Fail<ModelInputs>("Failed to read model inputs from json file.");
                 }
 
-                if (configOptions.StationDeclarations == null || configOptions.StationDeclarations.Count == 0)
+                if (inputs.StationDeclarations == null || inputs.StationDeclarations.Count == 0)
                 {
-                    return Result.Fail<PpcModel>("No station declarations found in the model inputs file.");
+                    return Result.Fail<ModelInputs>("No station declarations found in the model inputs file.");
                 }
 
-                var stations = ImportStationsAndDemandInfo(
-                    configOptions.StationDeclarations,
-                    configOptions.PlanningHorizon,
-                    configOptions.PastHorizon).ToList();
-
-                var stationPrecedences = SetStationsPrecedences(configOptions.StationDeclarations);
-                var stationInputPrecedences = SetStationsInputPrecedences(configOptions.StationDeclarations);
-                var stationInitialBuffer = SetStationsInitialBuffer(configOptions.StationDeclarations);
-
-                var model = new PpcModel(
-                    stations: stations,
-                    stationPrecedences: stationPrecedences,
-                    stationInputPrecedences: stationInputPrecedences,
-                    stationInitialBuffer: stationInitialBuffer,
-                    peakHorizon: configOptions.PeakHorizon,
-                    planningHorizon: configOptions.PlanningHorizon,
-                    pastHorizon: configOptions.PastHorizon
-                    );
-                
-                return Result.Ok(model);
+                return Result.Ok(inputs);
             }
             catch (Exception ex)
             {
-                return Result.Fail<PpcModel>($"An error occurred while reading model inputs from file : {ex.Message}");
+                return Result.Fail<ModelInputs>($"An error occurred while reading model inputs from file : {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Import model input, such as station declarations, planning horizon etc. from config file
+        /// </summary>
+        /// <param name="inputsFilePath"> JSON Configuration file.</param>
+        /// <returns> Configured <see cref="ProductionControlModel"/></returns>
+        public static Result<ProductionControlModel> CreateFromFile(string inputsFilePath)
+        {
+            try
+            {
+                var getInputsResult = GetInputsFromFile(inputsFilePath);
+                
+                if(getInputsResult.IsFailed)
+                {
+                    return Result.Fail<ProductionControlModel>(getInputsResult.Errors);
+                }
+
+                return CreateFromInputs(getInputsResult.Value);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail<ProductionControlModel>($"An error occurred while reading model inputs from file : {ex.Message}");
+            }
+        }
+
+        public static Result<ProductionControlModel> CreateFromInputs(ModelInputs inputs)
+        {
+            var stations = ImportStationsAndDemandInfo(
+                inputs.StationDeclarations,
+                inputs.PlanningHorizon,
+                inputs.PastHorizon).ToList();
+
+            var stationPrecedences = SetStationsPrecedences(inputs.StationDeclarations);
+            var stationInputPrecedences = SetStationsInputPrecedences(inputs.StationDeclarations);
+            var stationInitialBuffer = SetStationsInitialBuffer(inputs.StationDeclarations);
+
+            var model = new ProductionControlModel(
+                stations: stations,
+                stationPrecedences: stationPrecedences,
+                stationInputPrecedences: stationInputPrecedences,
+                stationInitialBuffer: stationInitialBuffer,
+                peakHorizon: inputs.PeakHorizon,
+                planningHorizon: inputs.PlanningHorizon,
+                pastHorizon: inputs.PastHorizon
+            );
+
+            return Result.Ok(model);
         }
 
         private static int[][] SetStationsPrecedences(List<StationDeclaration> stationDeclarations)
@@ -122,7 +146,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
             return stationsBuffersSizes;
         }
 
-        private static IOrderedEnumerable<Station> ImportStationsAndDemandInfo(
+        private static IOrderedEnumerable<StationModel> ImportStationsAndDemandInfo(
             List<StationDeclaration> stationDeclarations,
             int planningHorizon,
             int pastHorizon)
@@ -151,7 +175,7 @@ namespace SmartPPC.Core.Modelling.DDMRP
             }
 
             var stations = stationDeclarations
-                .Select(dec => new Station
+                .Select(dec => new StationModel
                 {
                     Index = dec.StationIndex ?? throw new InvalidDataException("Station index of one of the station declaration not declared"),
                     IsOutputStation = dec.NextStationsInput is null,

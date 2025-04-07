@@ -1,0 +1,114 @@
+{
+  "PlanningHorizon": 30,
+  "PastHorizon": 3,
+  "PeakHorizon": 5,
+  "StationDeclarations": [
+    {
+      "StationIndex": 0,
+      "ProcessingTime": 100,
+      "InitialBuffer": 20,
+      "PastBuffer": [ 10, 50, 20 ],
+      "PastOrderAmount": [ 20, 50, 20 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 1,
+          "InputAmount": 1
+        },
+        {
+          "NextStationIndex": 2,
+          "InputAmount": 2
+        }
+      ]
+    },
+    {
+      "StationIndex": 1,
+      "ProcessingTime": 20,
+      "PastBuffer": [ 50, 100, 50 ],
+      "PastOrderAmount": [ 50, 10, 20 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 3,
+          "InputAmount": 2
+        }
+      ]
+    },
+    {
+      "StationIndex": 2,
+      "ProcessingTime": 50,
+      "DemandVariability": 5,
+      "DemandForecast": [
+        17,
+        20,
+        50,
+        80,
+        45,
+        33,
+        106,
+        45,
+        17,
+        20,
+        50,
+        80,
+        45,
+        33,
+        106,
+        45,
+        17,
+        20,
+        50,
+        80,
+        45,
+        33,
+        106,
+        45,
+        33,
+        106,
+        45,
+        33,
+        106,
+        45
+      ],
+      "PastBuffer": [ 30, 40, 50 ],
+      "PastOrderAmount": [ 30, 40, 50 ]
+    },
+    {
+      "StationIndex": 3,
+      "ProcessingTime": 50,
+      "DemandVariability": 2,
+      "DemandForecast": [
+        17,
+        20,
+        50,
+        80,
+        45,
+        33,
+        106,
+        45,
+        17,
+        20,
+        50,
+        80,
+        45,
+        33,
+        106,
+        45,
+        17,
+        20,
+        50,
+        80,
+        45,
+        33,
+        106,
+        45,
+        33,
+        106,
+        45,
+        33,
+        106,
+        45
+      ],
+      "PastBuffer": [ 20, 30, 40 ],
+      "PastOrderAmount": [ 20, 20, 20]
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "PlanningHorizon": 30,
+  "PastHorizon": 3,
+  "PeakHorizon": 5,
+  "StationDeclarations": [
+    {
+      "StationIndex": 0,
+      "ProcessingTime": 0.01,
+      "InitialBuffer": 20,
+      "PastBuffer": [ 0, 0, 0 ],
+      "PastOrderAmount": [ 0, 0, 0 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 1,
+          "InputAmount": 1
+        }
+      ]
+    },
+    {
+      "StationIndex": 1,
+      "ProcessingTime": 0.01,
+      "PastBuffer": [ 0, 0, 0 ],
+      "PastOrderAmount": [ 0, 0, 0 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 2,
+          "InputAmount": 1
+        }
+      ]
+    },
+    {
+      "StationIndex": 2,
+      "ProcessingTime": 0.01,
+      "PastBuffer": [ 0, 0, 0 ],
+      "PastOrderAmount": [ 0, 0, 0 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 3,
+          "InputAmount": 1
+        }
+      ]
+    },
+    {
+      "StationIndex": 3,
+      "ProcessingTime": 0.01,
+      "PastBuffer": [ 0, 0, 0 ],
+      "PastOrderAmount": [ 0, 0, 0 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 4,
+          "InputAmount": 1
+        }
+      ]
+    },
+    {
+      "StationIndex": 4,
+      "ProcessingTime": 0.01,
+      "PastBuffer": [ 0, 0, 0 ],
+      "PastOrderAmount": [ 0, 0, 0 ],
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 5,
+          "InputAmount": 1
+        }
+      ]
+    },
+    {
+      "StationIndex": 5,
+      "ProcessingTime": 0.01,
+      "DemandVariability": 34,
+      "DemandForecast": [
+        80,
+        30,
+        50,
+        120,
+        150,
+        70,
+        106,
+        45,
+        60,
+        120,
+        130,
+        80,
+        50,
+        70,
+        106,
+        130,
+        100,
+        80,
+        50,
+        80,
+        45,
+        70,
+        106,
+        130,
+        100,
+        106,
+        45,
+        33,
+        106,
+        45
+      ],
+      "PastBuffer": [ 30, 30, 30 ],
+      "PastOrderAmount": [ 20, 20, 20 ]
+    }
+  ]
+}

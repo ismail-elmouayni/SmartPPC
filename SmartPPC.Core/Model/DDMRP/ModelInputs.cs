@@ -1,5 +1,5 @@
 ﻿
-namespace SmartPPC.Core.Modelling.DDMRP;
+namespace SmartPPC.Core.Model.DDMRP;
 
 public class ModelInputs
 {
@@ -7,6 +7,8 @@ public class ModelInputs
     public int PeakHorizon { get; set; }
     public int PastHorizon { get; set;  }
     public List<StationDeclaration>? StationDeclarations { get; set; }
+
+    public int NumberOfStations => StationDeclarations?.Count ?? 0;
 }
 
 public record StationDeclaration(

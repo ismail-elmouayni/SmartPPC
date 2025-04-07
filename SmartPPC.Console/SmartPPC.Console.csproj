@@ -12,6 +12,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="DDRMP_ModelInputs - ConfigA.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="DDRMP_ModelInputs - ConfigB.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="DDRMP_ModelInputs - ConfigC.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="DDRMP_ModelInputs - Default.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="DDRMP_ModelInputs.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

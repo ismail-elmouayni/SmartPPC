@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json;
-using SmartPPC.Core.Modelling.DDMRP;
+using SmartPPC.Core.Model.DDMRP;
 using SmartPPC.Core.Solver.GA;
 using FluentResults;
 
@@ -35,8 +35,9 @@ namespace SmartPPC.Api.Pages
             System.IO.File.WriteAllText(tempFilePath, JsonConvert.SerializeObject(ModelInputs));
 
             // Execute the solver
-            var solver = new Solver();
-            var result = solver.Resolve(tempFilePath);
+            var solver = new GnSolver();
+            solver.Initialize(tempFilePath);
+            var result = solver.Resolve();
 
             if (result.IsSuccess)
             {

@@ -1,58 +1,29 @@
-﻿using SmartPPC.Core.Modelling;
-using GeneticSharp;
-using NCalc;
+﻿using GeneticSharp;
+using SmartPPC.Core.Model.DDMRP;
 
 namespace SmartPPC.Core.Solver.GA;
 
 public class Fitness : IFitness
 {
-    private IMathModel _model;
+    private readonly ModelInputs _modelInputs;
 
-    public List<double> Curve = new List<double>();
-    public Fitness(IMathModel model) => _model = model;
+    public List<double> Curve = new();
+    public Fitness(ModelInputs inputs) => _modelInputs = inputs;
 
     public double Evaluate(IChromosome chromosome)
     {
-        var ppcChromosome = chromosome as Chromosome;
-        var solution = ppcChromosome.GetSolution();
+        var controlModel = ModelBuilder.CreateFromInputs(_modelInputs)
+            .Value;
 
-        double penalty = 0;
+        var buffersActivation = chromosome.GetGenes()
+            .Select(g => (int)g.Value)
+            .ToArray();
 
-        foreach (var constraint in _model.Constraints)
-        {
-            // TODO : penality not working properly
-            if (!constraint.IsVerified())
-            {
-                penalty += 1000; // Pénalité pour les solutions non faisables
-            }
-        }
+        controlModel.PlanBasedOnBuffersPositions(buffersActivation);
 
-        var fitnessValue = (double) solution.ObjectiveFunctionValue;
+        var fitnessValue = (double) (1/controlModel.ObjectiveFunctionValue);
         Curve.Add(fitnessValue);
 
         return fitnessValue;
-    }
-
-    public bool EvaluateConstraint(string expression, Dictionary<string, double> solution)
-    {
-        var expr = new Expression(expression);
-        foreach (var variable in solution)
-        {
-            expr.Parameters[variable.Key] = variable.Value;
-        }
-
-        var result = expr.Evaluate();
-        return Convert.ToBoolean(result);
-    }
-
-    public double EvaluateExpression(string expression, Dictionary<string, double> solution)
-    {
-        var expr = new Expression(expression);
-        foreach (var variable in solution)
-        {
-            expr.Parameters[variable.Key] = variable.Value;
-        }
-
-        return Convert.ToDouble(expr.Evaluate());
     }
 }

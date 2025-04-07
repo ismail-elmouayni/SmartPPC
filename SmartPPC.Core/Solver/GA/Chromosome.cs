@@ -1,46 +1,27 @@
-﻿using SmartPPC.Core.Modelling;
+﻿using SmartPPC.Core.Model;
 using GeneticSharp;
 
 namespace SmartPPC.Core.Solver.GA;
 
-public class Chromosome(int length) : ChromosomeBase(length), IBinaryChromosome
+public class Chromosome : BinaryChromosomeBase
 {
-    private readonly IMathModel _model;
-    private readonly Dictionary<string, double> _solution;
+    private readonly int _numberOfStations;
 
-    public Chromosome(IMathModel model) : this(model.DecisionVariablesCount)
+    public Chromosome(int numberOfStations) : base(numberOfStations)
     {
-        _model = model;
-        _solution = new Dictionary<string, double>();
+        _numberOfStations = numberOfStations;
 
-        _model.GenerateRandomSolution();
-        var genes = _model.ToGenes();
+        var stationHasBuffer = RandomizationProvider.Current
+            .GetInts(numberOfStations, 0, 2);
 
-        for (int i = 0; i < genes.Count(); i++)
+        for (var i = 0; i < stationHasBuffer.Length; i++)
         {
-            ReplaceGene(i, genes.ElementAt(i));
+            ReplaceGene(i, new Gene(stationHasBuffer[i]));
         }
     }
 
     public override IChromosome CreateNew()
     {
-        return new Chromosome(_model);
-    }
-
-    public void FlipGene(int index)
-    {
-        //TODO : to be implemented
-    }
-
-    public override Gene GenerateGene(int geneIndex)
-    {
-         _model.SetDecisionVariableRandomly(geneIndex);
-         var genes = _model.ToGenes();
-        return genes.ElementAt(geneIndex);
-    }
-
-    public IMathModel GetSolution()
-    {
-        return _model;
+        return new Chromosome(_numberOfStations);
     }
 }
