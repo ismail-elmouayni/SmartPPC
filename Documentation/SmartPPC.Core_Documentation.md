@@ -279,66 +279,71 @@ classDiagram
 sequenceDiagram
     actor User
     participant GnSolver
-    participant GA as GeneticAlgorithm (GeneticSharp)
-    participant Fitness as Fitness (SmartPPC)
-    participant Model as ProductionControlModel (SmartPPC)
-    participant Chromosome as Chromosome (SmartPPC)
-    participant Builder as ModelBuilder (SmartPPC)
+    participant GA
+    participant Fitness
+    participant Model
+    participant Chromosome
+    participant Builder
 
     User->>GnSolver: Resolve()
     activate GnSolver
 
     GnSolver->>GA: Start()
     activate GA
-
-    loop GA Generations
-        GA->>Fitness: Evaluate(chromosome)
-        activate Fitness
-        Fitness->>Builder: CreateFromInputs(modelInputs)
+ loop GA Generations
+        GA->>Fitness: Evaluate(chromosome) %% GA passes an IChromosome activate Fitness note right of Fitness: Casts GA's IChromosome to SmartPPC.Chromosome
+        
+        Fitness->>Builder: CreateFromInputs(modelInputs) %% Creates a temporary model for evaluation
         activate Builder
         Builder-->>Fitness: controlModel
         deactivate Builder
-        Fitness->>Chromosome: GetGenes()
-        activate Chromosome
+        
+        Fitness->>Chromosome: GetGenes() %% Called on the chromosome instance passed by GA
+        activate Chromosome %% Represents interaction with the chromosome object
+        
         Chromosome-->>Fitness: genes (buffersActivation)
         deactivate Chromosome
-        Fitness->>Model: PlanBasedOnBuffersPositions(buffersActivation)
+        
+        Fitness->>Model: PlanBasedOnBuffersPositions(buffersActivation) %% Called on the temporary controlModel
         activate Model
-        Model-->>Fitness:
-        deactivate Model
-        Fitness->>Model: ObjectiveFunctionValue
+        
+        Model-->>Fitness:deactivate Model
+        
+        Fitness->>Model: ObjectiveFunctionValue %% Get value from temporary controlModel
         activate Model
+        
         Model-->>Fitness: objectiveValue
         deactivate Model
-        Fitness->>Fitness: RecordFitness(1 / objectiveValue)
+        
+        Fitness->>Fitness: RecordFitness(1 / objectiveValue) %% Adds to internal Fitness.Curve
+        
         Fitness-->>GA: fitnessValue (1 / objectiveValue)
-        deactivate Fitness
-        GA->>GA: Perform Selection, Crossover, Mutation
+        deactivate Fitness %% GA performs Selection, Crossover, Mutation internally before next loop/termination
     end
 
-    GA-->>GnSolver: BestChromosome
+    GA-->>GnSolver: BestChromosome %% GA returns the best IChromosome
     deactivate GA
 
-    GnSolver->>Chromosome: GetGenes()
-    activate Chromosome
+    note right of GnSolver: Casts BestChromosome to SmartPPC.Chromosome
+    GnSolver->>Chromosome: GetGenes() %% Called on the BestChromosome instance from GA
+    activate Chromosome %% Represents interaction with the chromosome object
     Chromosome-->>GnSolver: bestBuffersActivation
     deactivate Chromosome
 
-    GnSolver->>Builder: CreateFromInputs(modelInputs)
+    GnSolver->>Builder: CreateFromInputs(modelInputs) %% Creates the FINAL model instance
     activate Builder
     Builder-->>GnSolver: finalModel
     deactivate Builder
 
-    GnSolver->>Model: PlanBasedOnBuffersPositions(bestBuffersActivation)
+    GnSolver->>Model: PlanBasedOnBuffersPositions(bestBuffersActivation) %% Called on the finalModel
     activate Model
     Model-->>GnSolver:
     deactivate Model
 
-    GnSolver->>Fitness: Curve
+    GnSolver->>Fitness: Curve %% Access Fitness.Curve property containing recorded values
     activate Fitness
     Fitness-->>GnSolver: fitnessCurveData
     deactivate Fitness
-
     GnSolver-->>User: OptimizationResult(finalModel, fitnessCurve)
     deactivate GnSolver
 
