@@ -8,6 +8,8 @@ public class ProductionControlModel : IProductionControlModel
     public int PlanningHorizon { get; set; }
     public int PastHorizon { get; set; }
 
+    public float PeakThreshold { get; set; } = 0.66f;
+
     /// <summary>
     /// The horizon in which we look for a peak demand. 
     /// </summary>
@@ -68,6 +70,7 @@ public class ProductionControlModel : IProductionControlModel
         int planningHorizon,
         int peakHorizon,
         int pastHorizon,
+        float peakThreshold,
         int[] stationInitialBuffer,
         int[][] stationPrecedences,
         int[][] stationInputPrecedences)
@@ -82,10 +85,9 @@ public class ProductionControlModel : IProductionControlModel
 
         Constraints = new List<IConstraint>
         {
-            new ReplenishmentsConstraint(Stations)
         };
 
-        _objectiveFunction = new MinBuffersAndMaxDemandsObjective(Stations);
+        _objectiveFunction = new MinBuffersAndMaxDemandsObjective(Stations, stationPrecedences);
     }
 
     public IEnumerable<Gene> ToGenes()
@@ -132,27 +134,6 @@ public class ProductionControlModel : IProductionControlModel
 
         Status = ControlModelStatus.Initialized;
     }
-
-    public void ReGenerateSolutionIfBuffersModified()
-    {
-        foreach (var station in Stations.OrderBy(s => s.Index))
-        {
-            SetLeadTimeForStation(station);
-        }
-
-        foreach (var station in Stations.OrderBy(s => s.Index))
-        {
-            SetLeadTimeFactorForStation(station);
-        }
-
-        SetInitialBufferAndOrdersAmount();
-
-        for (int t = 1; t < PlanningHorizon; t++)
-        {
-            ComputeBuffersOrdersAndReplenishment(t);
-        }
-    }
-
 
     public void SetLeadTimeForStation(StationModel stationModel)
     {
@@ -211,8 +192,9 @@ public class ProductionControlModel : IProductionControlModel
 
     public void SetDemandVariabilityForStation(StationModel stationModel)
     {
-        var variability = Stations.Where(s => s.Index > stationModel.Index)
-            .Sum(s => StationInputPrecedences[stationModel.Index][s.Index] * s.DemandVariability);
+        var variability = (Stations.Where(s => s.Index > stationModel.Index)
+            .Sum(s => StationInputPrecedences[stationModel.Index][s.Index] * s.DemandVariability * s.AverageDemand)
+            )/stationModel.AverageDemand;
 
         stationModel.DemandVariability = variability;
     }
@@ -247,7 +229,7 @@ public class ProductionControlModel : IProductionControlModel
         int? peakDemand = null;
         for (var i = t; i < t + PeakHorizon && i < PlanningHorizon; i++)
         {
-            if (stationModel.DemandForecast[i] >= (i - t + 1) * stationModel.TOR)
+            if (stationModel.DemandForecast[i] >= PeakThreshold * stationModel.TOR)
             {
                 peakDemand = stationModel.DemandForecast[i];
                 break;

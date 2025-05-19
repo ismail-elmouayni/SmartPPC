@@ -72,7 +72,8 @@ namespace SmartPPC.Core.Model.DDMRP
                 stationInitialBuffer: stationInitialBuffer,
                 peakHorizon: inputs.PeakHorizon,
                 planningHorizon: inputs.PlanningHorizon,
-                pastHorizon: inputs.PastHorizon
+                pastHorizon: inputs.PastHorizon,
+                peakThreshold: inputs.PeakThreshold
             );
 
             return Result.Ok(model);

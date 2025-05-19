@@ -2,6 +2,7 @@
   "PlanningHorizon": 30,
   "PastHorizon": 3,
   "PeakHorizon": 5,
+  "PeakThreshold": 0.66,
   "StationDeclarations": [
     {
       "StationIndex": 0,
@@ -108,7 +109,7 @@
         45
       ],
       "PastBuffer": [ 20, 30, 40 ],
-      "PastOrderAmount": [ 20, 20, 20]
+      "PastOrderAmount": [ 20, 20, 20 ]
     }
   ]
 }
