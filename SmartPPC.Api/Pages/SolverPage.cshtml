@@ -1,47 +1,193 @@
-﻿@page
+@page
+@using SmartPPC.Api.Pages
+@using static SmartPPC.Api.Pages.SolverPageModel
 @model SmartPPC.Api.Pages.SolverPageModel
 @{
-    ViewData["Title"] = "Solver Page";
+    ViewData["Title"] = "Solver";
 }
 
-<h1>Solver Page</h1>
+<div style="padding: 20px;">
+    <MudGrid>
+        <MudItem xs="12">
+            <MudPaper Class="pa-6" Elevation="2">
+                <MudText Typo="Typo.h4" Class="mb-4">Production Planning Solver</MudText>
 
-<form method="post">
-    <div>
-        <label for="PlanningHorizon">Planning Horizon:</label>
-        <input type="number" id="PlanningHorizon" name="PlanningHorizon" value="@Model.ModelInputs.PlanningHorizon" />
-    </div>
-    <div>
-        <label for="PeakHorizon">Peak Horizon:</label>
-        <input type="number" id="PeakHorizon" name="PeakHorizon" value="@Model.ModelInputs.PeakHorizon" />
-    </div>
-    <div>
-        <label for="PastHorizon">Past Horizon:</label>
-        <input type="number" id="PastHorizon" name="PastHorizon" value="@Model.ModelInputs.PastHorizon" />
-    </div>
-    <div>
-        <label for="StationDeclarations">Station Declarations:</label>
-        <textarea id="StationDeclarations" name="StationDeclarations">@Model.StationDeclarationsJson</textarea>
-    </div>
-    <button type="submit">Solve</button>
-</form>
-
-@if (Model.Result != null)
-{
-    <h2>Result</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>GENES</th>
-            </tr>
-        </thead>
-        <tbody>
-                @foreach (var gene in @Model.Result.Solution.ToGenes())
+                @if (!Model.HasConfiguration)
                 {
-                    <td>
-                        gene
-                    </td>
+                    <MudAlert Severity="Severity.Warning" Class="mb-4">
+                        No configuration found. Please configure the system before running the solver.
+                    </MudAlert>
                 }
-    </tbody>
-    </table>
-}
+                else
+                {
+                    <MudText Typo="Typo.body1" Class="mb-4">
+                        Run the genetic algorithm solver to optimize production planning based on your current configuration.
+                    </MudText>
+
+                    <MudGrid Class="mb-4">
+                        <MudItem xs="12" md="3">
+                            <MudPaper Class="pa-4" Elevation="1">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Planning Horizon</MudText>
+                                    <MudText Typo="Typo.h5">@Model.ModelInputs.PlanningHorizon</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudPaper Class="pa-4" Elevation="1">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Stations</MudText>
+                                    <MudText Typo="Typo.h5">@Model.ModelInputs.NumberOfStations</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudPaper Class="pa-4" Elevation="1">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Output Stations</MudText>
+                                    <MudText Typo="Typo.h5">@Model.OutputStationsCount</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudPaper Class="pa-4" Elevation="1">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Decision Variables</MudText>
+                                    <MudText Typo="Typo.h5">@Model.ModelInputs.NumberOfStations</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-4" />
+
+                    <form method="post">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                                   Disabled="@(!Model.HasConfiguration)">
+                            Run Optimization Solver
+                        </MudButton>
+                    </form>
+                }
+            </MudPaper>
+        </MudItem>
+
+        @if (Model.Result != null)
+        {
+            <MudItem xs="12">
+                <MudPaper Class="pa-6" Elevation="2">
+                    <MudAlert Severity="Severity.Success" Class="mb-4">
+                        Optimization completed successfully!
+                    </MudAlert>
+
+                    <MudGrid>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="1">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Objective Function Value</MudText>
+                                    <MudText Typo="Typo.h5">@(Model.Result.Solution.ObjectiveFunctionValue?.ToString("F2") ?? "N/A")</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="1">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Buffer Level</MudText>
+                                    <MudText Typo="Typo.h5">@Model.Result.Solution.GetAverageBuffersLevel().ToString("F2")</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="1">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Unsatisfied Demand</MudText>
+                                    <MudText Typo="Typo.h5">@Model.Result.Solution.GetAverageNotSatisfiedDemand().ToString("F2")</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-4" />
+
+                    <MudText Typo="Typo.h6" Class="mb-3">Solution: Buffer Activation Genes</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                        Each gene represents whether a buffer should be activated (1) or not (0) for each station.
+                    </MudText>
+
+                    <MudSimpleTable Striped="true" Dense="true" Hover="true" Bordered="true">
+                        <thead>
+                            <tr>
+                                <th>Station Index</th>
+                                <th>Buffer Activated</th>
+                                <th>Gene Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var gene in Model.GetGeneDisplays())
+                            {
+                                <tr>
+                                    <td>@gene.StationIndex</td>
+                                    <td>
+                                        @if (gene.Value == 1)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success">Yes</MudChip>
+                                        }
+                                        else
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">No</MudChip>
+                                        }
+                                    </td>
+                                    <td>@gene.Value</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+
+                    @if (Model.Result.FitnessCurve != null && Model.Result.FitnessCurve.Any())
+                    {
+                        <MudDivider Class="my-4" />
+
+                        <MudText Typo="Typo.h6" Class="mb-3">Fitness Evolution</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                            Best fitness value per generation (lower is better)
+                        </MudText>
+                        <MudSimpleTable Striped="true" Dense="true" Hover="true" Style="max-height: 300px; overflow-y: auto;">
+                            <thead>
+                                <tr>
+                                    <th>Generation</th>
+                                    <th>Best Fitness</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    int gen = 0;
+                                    foreach (var fitness in Model.Result.FitnessCurve.Take(20))
+                                    {
+                                        <tr>
+                                            <td>@gen</td>
+                                            <td>@fitness.ToString("F4")</td>
+                                        </tr>
+                                        gen++;
+                                    }
+                                    if (Model.Result.FitnessCurve.Count() > 20)
+                                    {
+                                        <tr>
+                                            <td colspan="2" style="text-align: center;">
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                    ... (@(Model.Result.FitnessCurve.Count() - 20) more generations)
+                                                </MudText>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</div>

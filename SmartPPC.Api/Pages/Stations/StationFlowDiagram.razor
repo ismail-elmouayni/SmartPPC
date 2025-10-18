@@ -1,0 +1,125 @@
+@using SmartPPC.Core.Model.DDMRP
+
+<svg width="100%" height="400" viewBox="0 0 800 400" style="border: 1px solid #e0e0e0; background-color: white;">
+    @if (Stations != null && Stations.Any())
+    {
+        @* Calculate positions for stations in a flow layout *@
+        var stationPositions = CalculateStationPositions();
+
+        @* Draw connections first (so they appear behind stations) *@
+        @foreach (var station in Stations)
+        {
+            if (station.NextStationsInput != null && station.StationIndex.HasValue)
+            {
+                var fromPos = stationPositions.GetValueOrDefault(station.StationIndex.Value);
+                @foreach (var next in station.NextStationsInput)
+                {
+                    var toPos = stationPositions.GetValueOrDefault(next.NextStationIndex);
+                    if (fromPos != default && toPos != default)
+                    {
+                        <line x1="@(fromPos.X + 60)" y1="@(fromPos.Y + 30)"
+                              x2="@(toPos.X)" y2="@(toPos.Y + 30)"
+                              stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" />
+
+                        @* Label for input amount *@
+                        @((MarkupString)$"<text x=\"{(fromPos.X + toPos.X) / 2 + 30}\" y=\"{(fromPos.Y + toPos.Y) / 2 + 20}\" font-size=\"12\" fill=\"#666\">×{next.InputAmount}</text>")
+                    }
+                }
+            }
+        }
+
+        @* Draw stations *@
+        @foreach (var station in Stations)
+        {
+            if (station.StationIndex.HasValue)
+            {
+                var pos = stationPositions.GetValueOrDefault(station.StationIndex.Value);
+                var isSelected = station.StationIndex == SelectedStationIndex;
+                var isOutput = station.DemandForecast != null && station.DemandForecast.Any();
+
+                <g @onclick="@(() => OnStationClick(station.StationIndex.Value))" style="cursor: pointer;">
+                    <rect x="@pos.X" y="@pos.Y" width="120" height="60"
+                          fill="@(isSelected ? "#bb86fc" : isOutput ? "#03dac6" : "#6200ee")"
+                          stroke="@(isSelected ? "#000" : "#333")"
+                          stroke-width="@(isSelected ? 3 : 2)"
+                          rx="5" />
+
+                    @((MarkupString)$"<text x=\"{pos.X + 60}\" y=\"{pos.Y + 25}\" text-anchor=\"middle\" fill=\"white\" font-weight=\"bold\" font-size=\"14\">Station {station.StationIndex}</text>")
+
+                    @((MarkupString)$"<text x=\"{pos.X + 60}\" y=\"{pos.Y + 45}\" text-anchor=\"middle\" fill=\"white\" font-size=\"11\">PT: {station.ProcessingTime}</text>")
+
+                    @if (isOutput)
+                    {
+                        <circle cx="@(pos.X + 110)" cy="@(pos.Y + 10)" r="8" fill="#ff6b6b" />
+                        @((MarkupString)$"<text x=\"{pos.X + 110}\" y=\"{pos.Y + 14}\" text-anchor=\"middle\" fill=\"white\" font-size=\"10\" font-weight=\"bold\">O</text>")
+                    }
+                </g>
+            }
+        }
+
+        @* Arrow marker definition *@
+        <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                <polygon points="0 0, 10 3, 0 6" fill="#666" />
+            </marker>
+        </defs>
+    }
+    else
+    {
+        @((MarkupString)"<text x=\"400\" y=\"200\" text-anchor=\"middle\" fill=\"#999\" font-size=\"16\">No stations configured. Add a station to get started.</text>")
+    }
+</svg>
+
+<div class="mt-2">
+    <MudChip T="string" Size="Size.Small" Color="MudBlazor.Color.Primary">Input Station</MudChip>
+    <MudChip T="string" Size="Size.Small" Color="MudBlazor.Color.Tertiary">Output Station</MudChip>
+    <MudChip T="string" Size="Size.Small" Color="MudBlazor.Color.Secondary">Selected</MudChip>
+</div>
+
+@code {
+    [Parameter]
+    public List<StationDeclaration>? Stations { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnStationSelected { get; set; }
+
+    [Parameter]
+    public int? SelectedStationIndex { get; set; }
+
+    private Dictionary<int, (int X, int Y)> CalculateStationPositions()
+    {
+        var positions = new Dictionary<int, (int X, int Y)>();
+
+        if (Stations == null || !Stations.Any())
+            return positions;
+
+        // Simple layout: arrange stations in rows
+        int stationsPerRow = 4;
+        int xSpacing = 180;
+        int ySpacing = 120;
+        int startX = 50;
+        int startY = 50;
+
+        for (int i = 0; i < Stations.Count; i++)
+        {
+            var station = Stations[i];
+            if (station.StationIndex.HasValue)
+            {
+                int row = i / stationsPerRow;
+                int col = i % stationsPerRow;
+
+                positions[station.StationIndex.Value] = (
+                    startX + col * xSpacing,
+                    startY + row * ySpacing
+                );
+            }
+        }
+
+        return positions;
+    }
+
+    private async Task OnStationClick(int stationIndex)
+    {
+        await OnStationSelected.InvokeAsync(stationIndex);
+    }
+}

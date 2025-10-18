@@ -1,0 +1,20 @@
+@page
+@model SmartPPC.Api.Pages.Settings.GeneralSettingsModel
+@{
+    ViewData["Title"] = "General Settings";
+}
+
+<h1>General Settings</h1>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success">@Model.SuccessMessage</div>
+}
+
+<component type="typeof(SmartPPC.Api.Pages.Settings.GeneralSettingsComponent)" render-mode="ServerPrerendered"
+    param-ModelInputs="Model.ModelInputs" />

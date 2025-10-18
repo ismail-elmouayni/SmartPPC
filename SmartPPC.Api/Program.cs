@@ -1,3 +1,5 @@
+using MudBlazor.Services;
+
 namespace Api;
 
 public class Program
@@ -11,6 +13,12 @@ public class Program
 
         builder.Services.AddControllers();
         builder.Services.AddRazorPages();
+        builder.Services.AddServerSideBlazor();
+        builder.Services.AddMudServices();
+
+        // Register Configuration Service
+        builder.Services.AddScoped<SmartPPC.Api.Services.ConfigurationService>();
+
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
@@ -30,6 +38,7 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+        app.UseStaticFiles();
 
         app.UseAuthorization();
         app.UseRouting();
@@ -37,6 +46,7 @@ public class Program
         {
             endpoints.MapRazorPages();
             endpoints.MapControllers();
+            endpoints.MapBlazorHub();
         });
 
         

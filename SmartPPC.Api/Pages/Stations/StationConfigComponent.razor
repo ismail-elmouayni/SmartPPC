@@ -1,0 +1,321 @@
+@using SmartPPC.Core.Model.DDMRP
+@using SmartPPC.Api.Services
+@using MudBlazor
+@layout SmartPPC.Api.Pages.Shared.AppLayout
+@inject ConfigurationService ConfigService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudGrid>
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Production Line Flow</MudText>
+            <div style="min-height: 400px; border: 1px solid #ddd; border-radius: 4px; padding: 20px; background-color: #fafafa;">
+                <StationFlowDiagram Stations="ModelInputs.StationDeclarations" OnStationSelected="SelectStation" SelectedStationIndex="selectedStationIndex" />
+            </div>
+        </MudPaper>
+
+        @if (selectedStation != null)
+        {
+            <MudPaper Class="pa-4 mt-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-4">Station @selectedStation.StationIndex Details</MudText>
+
+                <MudForm @ref="stationForm">
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField Value="selectedStation.StationIndex"
+                                             Label="Station Index"
+                                             Variant="Variant.Outlined"
+                                             Disabled="true"
+                                             ReadOnly="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudNumericField @bind-Value="editProcessingTime"
+                                             Label="Processing Time"
+                                             Variant="Variant.Outlined"
+                                             Min="0"
+                                             Required="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudNumericField @bind-Value="editLeadTime"
+                                             Label="Lead Time"
+                                             Variant="Variant.Outlined"
+                                             Min="0" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudNumericField @bind-Value="editInitialBuffer"
+                                             Label="Initial Buffer"
+                                             Variant="Variant.Outlined"
+                                             Min="0" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudNumericField @bind-Value="editDemandVariability"
+                                             Label="Demand Variability"
+                                             Variant="Variant.Outlined"
+                                             Min="0"
+                                             HelperText="For output stations only" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Past Buffer (Length: @ModelInputs.PastHorizon)</MudText>
+                            <MudStack Row="true" Spacing="2">
+                                @for (int i = 0; i < ModelInputs.PastHorizon; i++)
+                                {
+                                    var index = i;
+                                    <MudNumericField @bind-Value="editPastBuffer[index]"
+                                                     Label="@($"Period {index + 1}")"
+                                                     Variant="Variant.Outlined"
+                                                     Min="0"
+                                                     Style="max-width: 120px;" />
+                                }
+                            </MudStack>
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Past Order Amount (Length: @ModelInputs.PastHorizon)</MudText>
+                            <MudStack Row="true" Spacing="2">
+                                @for (int i = 0; i < ModelInputs.PastHorizon; i++)
+                                {
+                                    var index = i;
+                                    <MudNumericField @bind-Value="editPastOrderAmount[index]"
+                                                     Label="@($"Period {index + 1}")"
+                                                     Variant="Variant.Outlined"
+                                                     Min="0"
+                                                     Style="max-width: 120px;" />
+                                }
+                            </MudStack>
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Next Stations Input</MudText>
+                            @if (editNextStationsInput != null)
+                            {
+                                @foreach (var input in editNextStationsInput)
+                                {
+                                    <MudStack Row="true" Spacing="2" Class="mb-2">
+                                        <MudNumericField @bind-Value="input.NextStationIndex"
+                                                         Label="Next Station Index"
+                                                         Variant="Variant.Outlined"
+                                                         Min="0"
+                                                         Style="max-width: 200px;" />
+                                        <MudNumericField @bind-Value="input.InputAmount"
+                                                         Label="Input Amount"
+                                                         Variant="Variant.Outlined"
+                                                         Min="1"
+                                                         Style="max-width: 150px;" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => RemoveNextStationInput(input))" />
+                                    </MudStack>
+                                }
+                            }
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="AddNextStationInput" StartIcon="@Icons.Material.Filled.Add">
+                                Add Connection
+                            </MudButton>
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="CancelStationEdit">
+                                    Cancel
+                                </MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveStationEdit">
+                                    Update Station
+                                </MudButton>
+                            </MudStack>
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudPaper>
+        }
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Stations List</MudText>
+
+            <MudList T="string" Clickable="true">
+                @if (ModelInputs.StationDeclarations != null)
+                {
+                    @foreach (var station in ModelInputs.StationDeclarations)
+                    {
+                        <MudListItem T="string" OnClick="@(() => SelectStation(station.StationIndex ?? 0))"
+                                     Selected="@(selectedStationIndex == station.StationIndex)">
+                            <div>
+                                <MudText Typo="Typo.body1">Station @station.StationIndex</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Processing: @station.ProcessingTime</MudText>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                }
+            </MudList>
+
+            <MudDivider Class="my-4" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddNewStation" FullWidth="true" StartIcon="@Icons.Material.Filled.Add">
+                Add Station
+            </MudButton>
+
+            @if (selectedStation != null)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="DeleteStation" FullWidth="true" StartIcon="@Icons.Material.Filled.Delete" Class="mt-2">
+                    Delete Station @selectedStationIndex
+                </MudButton>
+            }
+
+            <MudDivider Class="my-4" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="SaveConfiguration" FullWidth="true" StartIcon="@Icons.Material.Filled.Save">
+                Save All Changes
+            </MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public ModelInputs ModelInputs { get; set; } = new ModelInputs();
+
+    private MudForm? stationForm;
+    private int? selectedStationIndex;
+    private StationDeclaration? selectedStation;
+
+    // Edit fields
+    private float? editProcessingTime;
+    private float? editLeadTime;
+    private int? editInitialBuffer;
+    private int[] editPastBuffer = Array.Empty<int>();
+    private int[] editPastOrderAmount = Array.Empty<int>();
+    private float? editDemandVariability;
+    private List<EditableStationInput>? editNextStationsInput;
+
+    // Mutable class for editing station inputs
+    private class EditableStationInput
+    {
+        public int NextStationIndex { get; set; }
+        public int InputAmount { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        if (ModelInputs.StationDeclarations == null)
+        {
+            ModelInputs.StationDeclarations = new List<StationDeclaration>();
+        }
+    }
+
+    private void SelectStation(int stationIndex)
+    {
+        selectedStationIndex = stationIndex;
+        selectedStation = ModelInputs.StationDeclarations?.FirstOrDefault(s => s.StationIndex == stationIndex);
+
+        if (selectedStation != null)
+        {
+            editProcessingTime = selectedStation.ProcessingTime;
+            editLeadTime = selectedStation.LeadTime;
+            editInitialBuffer = selectedStation.InitialBuffer;
+            editPastBuffer = selectedStation.PastBuffer?.ToArray() ?? new int[ModelInputs.PastHorizon];
+            editPastOrderAmount = selectedStation.PastOrderAmount?.ToArray() ?? new int[ModelInputs.PastHorizon];
+            editDemandVariability = selectedStation.DemandVariability;
+            editNextStationsInput = selectedStation.NextStationsInput?.Select(si => new EditableStationInput { NextStationIndex = si.NextStationIndex, InputAmount = si.InputAmount }).ToList() ?? new List<EditableStationInput>();
+        }
+    }
+
+    private void AddNewStation()
+    {
+        var newIndex = (ModelInputs.StationDeclarations?.Max(s => s.StationIndex) ?? -1) + 1;
+        var newStation = new StationDeclaration(
+            newIndex,
+            100,
+            null,
+            0,
+            new int[ModelInputs.PastHorizon],
+            new int[ModelInputs.PastHorizon],
+            null,
+            null,
+            new List<StationInput>()
+        );
+
+        ModelInputs.StationDeclarations ??= new List<StationDeclaration>();
+        ModelInputs.StationDeclarations.Add(newStation);
+        SelectStation(newIndex);
+        StateHasChanged();
+    }
+
+    private void DeleteStation()
+    {
+        if (selectedStationIndex.HasValue && ModelInputs.StationDeclarations != null)
+        {
+            var stationToRemove = ModelInputs.StationDeclarations.FirstOrDefault(s => s.StationIndex == selectedStationIndex);
+            if (stationToRemove != null)
+            {
+                ModelInputs.StationDeclarations.Remove(stationToRemove);
+                selectedStation = null;
+                selectedStationIndex = null;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void SaveStationEdit()
+    {
+        if (selectedStation != null && selectedStationIndex.HasValue)
+        {
+            var updatedStation = new StationDeclaration(
+                selectedStationIndex.Value,
+                editProcessingTime,
+                editLeadTime,
+                editInitialBuffer,
+                editPastBuffer,
+                editPastOrderAmount,
+                editDemandVariability,
+                selectedStation.DemandForecast,
+                editNextStationsInput?.Select(e => new StationInput(e.NextStationIndex, e.InputAmount)).ToList()
+            );
+
+            var index = ModelInputs.StationDeclarations!.FindIndex(s => s.StationIndex == selectedStationIndex);
+            if (index >= 0)
+            {
+                ModelInputs.StationDeclarations[index] = updatedStation;
+                Snackbar.Add($"Station {selectedStationIndex} updated", Severity.Success);
+                SelectStation(selectedStationIndex.Value);
+            }
+        }
+    }
+
+    private void CancelStationEdit()
+    {
+        selectedStation = null;
+        selectedStationIndex = null;
+    }
+
+    private void AddNextStationInput()
+    {
+        editNextStationsInput ??= new List<EditableStationInput>();
+        editNextStationsInput.Add(new EditableStationInput { NextStationIndex = 0, InputAmount = 1 });
+    }
+
+    private void RemoveNextStationInput(EditableStationInput input)
+    {
+        editNextStationsInput?.Remove(input);
+    }
+
+    private async Task SaveConfiguration()
+    {
+        try
+        {
+            ConfigService.ValidateConfiguration(ModelInputs);
+            await ConfigService.SaveConfigurationAsync(ModelInputs);
+            Snackbar.Add("Configuration saved successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving configuration: {ex.Message}", Severity.Error);
+        }
+    }
+}

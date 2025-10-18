@@ -1,0 +1,211 @@
+@using SmartPPC.Core.Model.DDMRP
+@using SmartPPC.Api.Services
+@using MudBlazor
+@layout SmartPPC.Api.Pages.Shared.AppLayout
+@inject ConfigurationService ConfigService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudPaper Class="pa-6" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-4">Demand Forecast for Output Stations</MudText>
+
+    @if (outputStations == null || !outputStations.Any())
+    {
+        <MudAlert Severity="Severity.Info">
+            No output stations configured. Please configure stations with demand forecast first.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect @bind-Value="selectedStationIndex" Label="Select Output Station" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var station in outputStations)
+                    {
+                        <MudSelectItem Value="@station.StationIndex">Station @station.StationIndex</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+
+        @if (selectedStationIndex.HasValue && selectedStation != null)
+        {
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.h6" Class="mb-2">Forecast for Station @selectedStationIndex</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                Planning Horizon: @ModelInputs.PlanningHorizon periods | Demand Variability: @selectedStation.DemandVariability
+            </MudText>
+
+            <MudTable T="ForecastRow" Items="@forecastData" Hover="true" Dense="true" Bordered="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Period</MudTh>
+                    <MudTh>Demand Forecast</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Period">@context.Period</MudTd>
+                    <MudTd DataLabel="Demand">
+                        <MudNumericField @bind-Value="context.Demand"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         Min="0"
+                                         HideSpinButtons="true"
+                                         Immediate="true" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <MudDivider Class="my-4" />
+
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="FillWithZeros">
+                        Fill with Zeros
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="FillWithAverage">
+                        Fill with Average
+                    </MudButton>
+                </MudStack>
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="CancelEdit">
+                        Cancel
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveForecast">
+                        Save Forecast
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        }
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public ModelInputs ModelInputs { get; set; } = new ModelInputs();
+
+    private List<StationDeclaration>? outputStations;
+    private int? selectedStationIndex;
+    private StationDeclaration? selectedStation;
+    private List<ForecastRow> forecastData = new List<ForecastRow>();
+
+    protected override void OnParametersSet()
+    {
+        LoadOutputStations();
+        if (outputStations != null && outputStations.Any() && !selectedStationIndex.HasValue)
+        {
+            selectedStationIndex = outputStations.First().StationIndex;
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (selectedStationIndex.HasValue)
+        {
+            LoadForecastForStation(selectedStationIndex.Value);
+        }
+    }
+
+    private void LoadOutputStations()
+    {
+        outputStations = ModelInputs.StationDeclarations?
+            .Where(s => s.DemandForecast != null || s.DemandVariability.HasValue)
+            .ToList();
+    }
+
+    private void LoadForecastForStation(int stationIndex)
+    {
+        selectedStation = ModelInputs.StationDeclarations?.FirstOrDefault(s => s.StationIndex == stationIndex);
+
+        if (selectedStation != null)
+        {
+            forecastData.Clear();
+
+            // Ensure forecast list matches planning horizon
+            var existingForecast = selectedStation.DemandForecast ?? new List<int>();
+
+            for (int i = 0; i < ModelInputs.PlanningHorizon; i++)
+            {
+                forecastData.Add(new ForecastRow
+                {
+                    Period = i + 1,
+                    Demand = i < existingForecast.Count ? existingForecast[i] : 0
+                });
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private void FillWithZeros()
+    {
+        foreach (var row in forecastData)
+        {
+            row.Demand = 0;
+        }
+    }
+
+    private void FillWithAverage()
+    {
+        var avg = forecastData.Any(f => f.Demand > 0)
+            ? (int)forecastData.Average(f => f.Demand)
+            : 50;
+
+        foreach (var row in forecastData)
+        {
+            row.Demand = avg;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        if (selectedStationIndex.HasValue)
+        {
+            LoadForecastForStation(selectedStationIndex.Value);
+        }
+    }
+
+    private async Task SaveForecast()
+    {
+        try
+        {
+            if (selectedStation != null && selectedStationIndex.HasValue && ModelInputs.StationDeclarations != null)
+            {
+                // Create updated station with new forecast
+                var demandForecast = forecastData.Select(f => f.Demand).ToList();
+
+                var updatedStation = new StationDeclaration(
+                    selectedStation.StationIndex,
+                    selectedStation.ProcessingTime,
+                    selectedStation.LeadTime,
+                    selectedStation.InitialBuffer,
+                    selectedStation.PastBuffer,
+                    selectedStation.PastOrderAmount,
+                    selectedStation.DemandVariability,
+                    demandForecast,
+                    selectedStation.NextStationsInput
+                );
+
+                var index = ModelInputs.StationDeclarations.FindIndex(s => s.StationIndex == selectedStationIndex);
+                if (index >= 0)
+                {
+                    ModelInputs.StationDeclarations[index] = updatedStation;
+                }
+
+                ConfigService.ValidateConfiguration(ModelInputs);
+                await ConfigService.SaveConfigurationAsync(ModelInputs);
+                Snackbar.Add($"Forecast for Station {selectedStationIndex} saved successfully!", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving forecast: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private class ForecastRow
+    {
+        public int Period { get; set; }
+        public int Demand { get; set; }
+    }
+}

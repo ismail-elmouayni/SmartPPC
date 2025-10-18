@@ -1,14 +1,26 @@
 {
   "PlanningHorizon": 30,
-  "PastHorizon": 3,
   "PeakHorizon": 5,
+  "PastHorizon": 3,
+  "PeakThreshold": 0.0,
   "StationDeclarations": [
     {
       "StationIndex": 0,
-      "ProcessingTime": 100,
+      "ProcessingTime": 100.0,
+      "LeadTime": null,
       "InitialBuffer": 20,
-      "PastBuffer": [ 10, 50, 20 ],
-      "PastOrderAmount": [ 20, 50, 20 ],
+      "PastBuffer": [
+        10,
+        50,
+        20
+      ],
+      "PastOrderAmount": [
+        20,
+        50,
+        20
+      ],
+      "DemandVariability": null,
+      "DemandForecast": null,
       "NextStationsInput": [
         {
           "NextStationIndex": 1,
@@ -22,9 +34,21 @@
     },
     {
       "StationIndex": 1,
-      "ProcessingTime": 20,
-      "PastBuffer": [ 50, 100, 50 ],
-      "PastOrderAmount": [ 50, 10, 20 ],
+      "ProcessingTime": 20.0,
+      "LeadTime": null,
+      "InitialBuffer": null,
+      "PastBuffer": [
+        50,
+        100,
+        50
+      ],
+      "PastOrderAmount": [
+        50,
+        10,
+        20
+      ],
+      "DemandVariability": null,
+      "DemandForecast": null,
       "NextStationsInput": [
         {
           "NextStationIndex": 3,
@@ -34,8 +58,20 @@
     },
     {
       "StationIndex": 2,
-      "ProcessingTime": 50,
-      "DemandVariability": 5,
+      "ProcessingTime": 50.0,
+      "LeadTime": null,
+      "InitialBuffer": null,
+      "PastBuffer": [
+        30,
+        40,
+        50
+      ],
+      "PastOrderAmount": [
+        30,
+        40,
+        50
+      ],
+      "DemandVariability": 5.0,
       "DemandForecast": [
         17,
         20,
@@ -68,13 +104,24 @@
         106,
         45
       ],
-      "PastBuffer": [ 30, 40, 50 ],
-      "PastOrderAmount": [ 30, 40, 50 ]
+      "NextStationsInput": null
     },
     {
       "StationIndex": 3,
-      "ProcessingTime": 50,
-      "DemandVariability": 2,
+      "ProcessingTime": 50.0,
+      "LeadTime": null,
+      "InitialBuffer": null,
+      "PastBuffer": [
+        20,
+        30,
+        40
+      ],
+      "PastOrderAmount": [
+        20,
+        20,
+        20
+      ],
+      "DemandVariability": 2.0,
       "DemandForecast": [
         17,
         20,
@@ -107,8 +154,32 @@
         106,
         45
       ],
-      "PastBuffer": [ 20, 30, 40 ],
-      "PastOrderAmount": [ 20, 20, 20]
+      "NextStationsInput": null
+    },
+    {
+      "StationIndex": 4,
+      "ProcessingTime": 100.0,
+      "LeadTime": null,
+      "InitialBuffer": 0,
+      "PastBuffer": [
+        0,
+        0,
+        0
+      ],
+      "PastOrderAmount": [
+        0,
+        0,
+        0
+      ],
+      "DemandVariability": null,
+      "DemandForecast": null,
+      "NextStationsInput": [
+        {
+          "NextStationIndex": 1,
+          "InputAmount": 1
+        }
+      ]
     }
-  ]
+  ],
+  "NumberOfStations": 5
 }
