@@ -13,68 +13,10 @@
             margin: 0;
             font-family: Roboto, sans-serif;
         }
-        .page-container {
-            display: flex;
-            height: 100vh;
-        }
-        .sidebar {
-            width: 250px;
-            background-color: #1e1e1e;
-            color: white;
-            padding: 20px;
-        }
-        .sidebar h2 {
-            color: #bb86fc;
-            margin-bottom: 30px;
-        }
-        .sidebar a {
-            display: block;
-            color: white;
-            text-decoration: none;
-            padding: 12px 10px;
-            margin-bottom: 5px;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        .sidebar a:hover {
-            background-color: #333;
-        }
-        .sidebar a.active {
-            background-color: #bb86fc;
-            color: #1e1e1e;
-            font-weight: 500;
-        }
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-            background-color: #f5f5f5;
-        }
     </style>
 </head>
 <body>
-    <div class="page-container">
-        <div class="sidebar">
-            <h2>SmartPPC</h2>
-            <nav>
-                <a href="/Settings/GeneralSettings" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Settings/GeneralSettings" ? "active" : "")">
-                    General Settings
-                </a>
-                <a href="/Stations/StationConfig" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Stations/StationConfig" ? "active" : "")">
-                    Station Configuration
-                </a>
-                <a href="/Forecast/DemandForecast" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/Forecast/DemandForecast" ? "active" : "")">
-                    Demand Forecast
-                </a>
-                <a href="/SolverPage" class="@(ViewContext.RouteData.Values["page"]?.ToString() == "/SolverPage" ? "active" : "")">
-                    Solver
-                </a>
-            </nav>
-        </div>
-        <div class="main-content">
-            @RenderBody()
-        </div>
-    </div>
+    @RenderBody()
 
     <script src="_framework/blazor.server.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
