@@ -1,0 +1,41 @@
+@page "/Stations/StationConfig"
+@using MudBlazor
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.Model.DDMRP
+@inject ConfigurationService ConfigService
+@inject ILogger<StationConfig> Logger
+
+<h1>Station Configuration</h1>
+
+@if (ErrorMessage != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@ErrorMessage</MudAlert>
+}
+
+@if (SuccessMessage != null)
+{
+    <MudAlert Severity="Severity.Success" Class="mb-4">@SuccessMessage</MudAlert>
+}
+
+<StationConfigComponent ModelInputs="ModelInputs" />
+
+@code {
+    private ModelInputs ModelInputs { get; set; } = new ModelInputs();
+    private string? ErrorMessage { get; set; }
+    private string? SuccessMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var config = await ConfigService.LoadConfigurationAsync();
+            ModelInputs = config ?? ConfigService.CreateDefaultConfiguration();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading configuration");
+            ErrorMessage = "Error loading configuration. Using default values.";
+            ModelInputs = ConfigService.CreateDefaultConfiguration();
+        }
+    }
+}

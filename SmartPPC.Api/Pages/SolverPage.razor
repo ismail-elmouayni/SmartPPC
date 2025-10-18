@@ -1,10 +1,12 @@
-@page
-@using SmartPPC.Api.Pages
-@using static SmartPPC.Api.Pages.SolverPageModel
-@model SmartPPC.Api.Pages.SolverPageModel
-@{
-    ViewData["Title"] = "Solver";
-}
+@page "/SolverPage"
+@using MudBlazor
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.Model.DDMRP
+@using SmartPPC.Core.Solver.GA
+@using FluentResults
+@using Newtonsoft.Json
+@inject ConfigurationService ConfigService
+@inject ILogger<SolverPage> Logger
 
 <div style="padding: 20px;">
     <MudGrid>
@@ -12,7 +14,7 @@
             <MudPaper Class="pa-6" Elevation="2">
                 <MudText Typo="Typo.h4" Class="mb-4">Production Planning Solver</MudText>
 
-                @if (!Model.HasConfiguration)
+                @if (!HasConfiguration)
                 {
                     <MudAlert Severity="Severity.Warning" Class="mb-4">
                         No configuration found. Please configure the system before running the solver.
@@ -29,7 +31,7 @@
                             <MudPaper Class="pa-4" Elevation="1">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">Planning Horizon</MudText>
-                                    <MudText Typo="Typo.h5">@Model.ModelInputs.PlanningHorizon</MudText>
+                                    <MudText Typo="Typo.h5">@ModelInputs.PlanningHorizon</MudText>
                                 </MudStack>
                             </MudPaper>
                         </MudItem>
@@ -37,7 +39,7 @@
                             <MudPaper Class="pa-4" Elevation="1">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">Stations</MudText>
-                                    <MudText Typo="Typo.h5">@Model.ModelInputs.NumberOfStations</MudText>
+                                    <MudText Typo="Typo.h5">@ModelInputs.NumberOfStations</MudText>
                                 </MudStack>
                             </MudPaper>
                         </MudItem>
@@ -45,7 +47,7 @@
                             <MudPaper Class="pa-4" Elevation="1">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">Output Stations</MudText>
-                                    <MudText Typo="Typo.h5">@Model.OutputStationsCount</MudText>
+                                    <MudText Typo="Typo.h5">@OutputStationsCount</MudText>
                                 </MudStack>
                             </MudPaper>
                         </MudItem>
@@ -53,7 +55,7 @@
                             <MudPaper Class="pa-4" Elevation="1">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">Decision Variables</MudText>
-                                    <MudText Typo="Typo.h5">@Model.ModelInputs.NumberOfStations</MudText>
+                                    <MudText Typo="Typo.h5">@ModelInputs.NumberOfStations</MudText>
                                 </MudStack>
                             </MudPaper>
                         </MudItem>
@@ -61,21 +63,32 @@
 
                     <MudDivider Class="my-4" />
 
-                    <form method="post">
-                        <MudButton ButtonType="ButtonType.Submit"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   Size="Size.Large"
-                                   StartIcon="@Icons.Material.Filled.PlayArrow"
-                                   Disabled="@(!Model.HasConfiguration)">
-                            Run Optimization Solver
-                        </MudButton>
-                    </form>
+                    <MudButton OnClick="RunSolver"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               Disabled="@(!HasConfiguration || isRunning)">
+                        @if (isRunning)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Running...</span>
+                        }
+                        else
+                        {
+                            <span>Run Optimization Solver</span>
+                        }
+                    </MudButton>
+                }
+
+                @if (errorMessage != null)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-4">@errorMessage</MudAlert>
                 }
             </MudPaper>
         </MudItem>
 
-        @if (Model.Result != null)
+        @if (Result != null)
         {
             <MudItem xs="12">
                 <MudPaper Class="pa-6" Elevation="2">
@@ -88,7 +101,7 @@
                             <MudPaper Class="pa-4" Elevation="1">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">Objective Function Value</MudText>
-                                    <MudText Typo="Typo.h5">@(Model.Result.Solution.ObjectiveFunctionValue?.ToString("F2") ?? "N/A")</MudText>
+                                    <MudText Typo="Typo.h5">@(Result.Solution.ObjectiveFunctionValue?.ToString("F2") ?? "N/A")</MudText>
                                 </MudStack>
                             </MudPaper>
                         </MudItem>
@@ -96,7 +109,7 @@
                             <MudPaper Class="pa-4" Elevation="1">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Buffer Level</MudText>
-                                    <MudText Typo="Typo.h5">@Model.Result.Solution.GetAverageBuffersLevel().ToString("F2")</MudText>
+                                    <MudText Typo="Typo.h5">@Result.Solution.GetAverageBuffersLevel().ToString("F2")</MudText>
                                 </MudStack>
                             </MudPaper>
                         </MudItem>
@@ -104,7 +117,7 @@
                             <MudPaper Class="pa-4" Elevation="1">
                                 <MudStack Spacing="1">
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Unsatisfied Demand</MudText>
-                                    <MudText Typo="Typo.h5">@Model.Result.Solution.GetAverageNotSatisfiedDemand().ToString("F2")</MudText>
+                                    <MudText Typo="Typo.h5">@Result.Solution.GetAverageNotSatisfiedDemand().ToString("F2")</MudText>
                                 </MudStack>
                             </MudPaper>
                         </MudItem>
@@ -126,7 +139,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var gene in Model.GetGeneDisplays())
+                            @foreach (var gene in GetGeneDisplays())
                             {
                                 <tr>
                                     <td>@gene.StationIndex</td>
@@ -146,7 +159,7 @@
                         </tbody>
                     </MudSimpleTable>
 
-                    @if (Model.Result.FitnessCurve != null && Model.Result.FitnessCurve.Any())
+                    @if (Result.FitnessCurve != null && Result.FitnessCurve.Any())
                     {
                         <MudDivider Class="my-4" />
 
@@ -164,7 +177,7 @@
                             <tbody>
                                 @{
                                     int gen = 0;
-                                    foreach (var fitness in Model.Result.FitnessCurve.Take(20))
+                                    foreach (var fitness in Result.FitnessCurve.Take(20))
                                     {
                                         <tr>
                                             <td>@gen</td>
@@ -172,12 +185,12 @@
                                         </tr>
                                         gen++;
                                     }
-                                    if (Model.Result.FitnessCurve.Count() > 20)
+                                    if (Result.FitnessCurve.Count() > 20)
                                     {
                                         <tr>
                                             <td colspan="2" style="text-align: center;">
                                                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                    ... (@(Model.Result.FitnessCurve.Count() - 20) more generations)
+                                                    ... (@(Result.FitnessCurve.Count() - 20) more generations)
                                                 </MudText>
                                             </td>
                                         </tr>
@@ -191,3 +204,120 @@
         }
     </MudGrid>
 </div>
+
+@code {
+    private ModelInputs ModelInputs { get; set; } = new ModelInputs();
+    private OptimizationResult? Result { get; set; }
+    private bool HasConfiguration { get; set; }
+    private int OutputStationsCount { get; set; }
+    private bool isRunning { get; set; }
+    private string? errorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var config = await ConfigService.LoadConfigurationAsync();
+            ModelInputs = config ?? ConfigService.CreateDefaultConfiguration();
+            HasConfiguration = ModelInputs.NumberOfStations > 0 && ModelInputs.PlanningHorizon > 0;
+            OutputStationsCount = ModelInputs.StationDeclarations?
+                .Count(s => s.DemandForecast != null && s.DemandForecast.Any()) ?? 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading configuration");
+            ModelInputs = ConfigService.CreateDefaultConfiguration();
+            HasConfiguration = false;
+            OutputStationsCount = 0;
+        }
+    }
+
+    private async Task RunSolver()
+    {
+        try
+        {
+            isRunning = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            // Load current configuration
+            ModelInputs = await ConfigService.LoadConfigurationAsync() ?? ConfigService.CreateDefaultConfiguration();
+            HasConfiguration = ModelInputs.NumberOfStations > 0 && ModelInputs.PlanningHorizon > 0;
+            OutputStationsCount = ModelInputs.StationDeclarations?
+                .Count(s => s.DemandForecast != null && s.DemandForecast.Any()) ?? 0;
+
+            if (!HasConfiguration)
+            {
+                errorMessage = "No valid configuration found. Please configure the system first.";
+                return;
+            }
+
+            // Save the ModelInputs to a temporary JSON file
+            var tempFilePath = Path.GetTempFileName();
+            await System.IO.File.WriteAllTextAsync(tempFilePath, JsonConvert.SerializeObject(ModelInputs));
+
+            Logger.LogInformation("Starting solver with configuration: {Stations} stations, {Horizon} planning horizon",
+                ModelInputs.NumberOfStations, ModelInputs.PlanningHorizon);
+
+            // Execute the solver
+            var solver = new GnSolver();
+            solver.Initialize(tempFilePath);
+            var result = solver.Resolve();
+
+            if (result.IsSuccess)
+            {
+                Result = result.Value as OptimizationResult;
+                Logger.LogInformation("Solver completed successfully. Objective value: {ObjectiveValue}",
+                    Result?.Solution?.ObjectiveFunctionValue);
+            }
+            else
+            {
+                Logger.LogError("Solver failed: {Errors}", string.Join(", ", result.Errors));
+                errorMessage = "An error occurred while solving the problem: " +
+                    string.Join(", ", result.Errors.Select(e => e.Message));
+            }
+
+            // Clean up temp file
+            if (System.IO.File.Exists(tempFilePath))
+            {
+                System.IO.File.Delete(tempFilePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error executing solver");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private List<GeneDisplay> GetGeneDisplays()
+    {
+        if (Result?.Solution == null)
+            return new List<GeneDisplay>();
+
+        var genes = Result.Solution.ToGenes().ToList();
+        var displays = new List<GeneDisplay>();
+
+        for (int i = 0; i < genes.Count; i++)
+        {
+            displays.Add(new GeneDisplay
+            {
+                StationIndex = i,
+                Value = (int)genes[i].Value
+            });
+        }
+
+        return displays;
+    }
+
+    public class GeneDisplay
+    {
+        public int StationIndex { get; set; }
+        public int Value { get; set; }
+    }
+}

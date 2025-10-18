@@ -42,12 +42,10 @@ public class Program
 
         app.UseAuthorization();
         app.UseRouting();
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapRazorPages();
-            endpoints.MapControllers();
-            endpoints.MapBlazorHub();
-        });
+
+        app.MapControllers();
+        app.MapBlazorHub();
+        app.MapFallbackToPage("/_Host");
 
         
 

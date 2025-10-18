@@ -1,8 +1,9 @@
-@page
-@model SmartPPC.Api.Pages.IndexModel
-@{
-    ViewData["Title"] = "Dashboard";
-}
+@page "/"
+@using MudBlazor
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.Model.DDMRP
+@inject ConfigurationService ConfigService
+@inject ILogger<Index> Logger
 
 <MudGrid>
     <MudItem xs="12">
@@ -82,14 +83,14 @@
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-3">Configuration Status</MudText>
             <MudList T="string">
-                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(Model.ModelInputs.PlanningHorizon > 0 ? Color.Success : Color.Default)">
-                    <MudText>Planning Horizon: <strong>@Model.ModelInputs.PlanningHorizon periods</strong></MudText>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(ModelInputs.PlanningHorizon > 0 ? Color.Success : Color.Default)">
+                    <MudText>Planning Horizon: <strong>@ModelInputs.PlanningHorizon periods</strong></MudText>
                 </MudListItem>
-                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(Model.ModelInputs.NumberOfStations > 0 ? Color.Success : Color.Default)">
-                    <MudText>Stations Configured: <strong>@Model.ModelInputs.NumberOfStations</strong></MudText>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(ModelInputs.NumberOfStations > 0 ? Color.Success : Color.Default)">
+                    <MudText>Stations Configured: <strong>@ModelInputs.NumberOfStations</strong></MudText>
                 </MudListItem>
-                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(Model.OutputStationsCount > 0 ? Color.Success : Color.Default)">
-                    <MudText>Output Stations: <strong>@Model.OutputStationsCount</strong></MudText>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(OutputStationsCount > 0 ? Color.Success : Color.Default)">
+                    <MudText>Output Stations: <strong>@OutputStationsCount</strong></MudText>
                 </MudListItem>
             </MudList>
         </MudPaper>
@@ -115,3 +116,26 @@
         </MudPaper>
     </MudItem>
 </MudGrid>
+
+@code {
+    private ModelInputs ModelInputs { get; set; } = new ModelInputs();
+    private int OutputStationsCount { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var config = await ConfigService.LoadConfigurationAsync();
+            ModelInputs = config ?? ConfigService.CreateDefaultConfiguration();
+
+            OutputStationsCount = ModelInputs.StationDeclarations?
+                .Count(s => s.DemandForecast != null || s.DemandVariability.HasValue) ?? 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading configuration");
+            ModelInputs = ConfigService.CreateDefaultConfiguration();
+            OutputStationsCount = 0;
+        }
+    }
+}
