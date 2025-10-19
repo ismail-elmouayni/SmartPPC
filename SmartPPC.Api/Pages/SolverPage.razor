@@ -127,6 +127,7 @@
                             <tr>
                                 <th>Station Index</th>
                                 <th>Buffer Activated</th>
+                                <th>Expected Avg Buffer</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -142,6 +143,16 @@
                                         else
                                         {
                                             <MudChip T="string" Size="MudSize.Small" Color="MudColor.Default">No</MudChip>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (gene.Value == 1)
+                                        {
+                                            @gene.AverageBufferLevel.ToString("F2")
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
                                         }
                                     </td>
                                 </tr>
@@ -354,10 +365,12 @@
 
         for (int i = 0; i < genes.Count; i++)
         {
+            var station = Result.Solution.Stations[i];
             displays.Add(new GeneDisplay
             {
                 StationIndex = i,
-                Value = (int)genes[i].Value
+                Value = (int)genes[i].Value,
+                AverageBufferLevel = station.GetAverageBufferLevel()
             });
         }
 
@@ -508,6 +521,7 @@
     {
         public int StationIndex { get; set; }
         public int Value { get; set; }
+        public float AverageBufferLevel { get; set; }
     }
 
     public class FitnessPoint

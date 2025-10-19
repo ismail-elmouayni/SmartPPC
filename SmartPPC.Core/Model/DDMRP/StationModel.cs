@@ -59,5 +59,17 @@ public class StationModel
             return TOR + LeadTime * AverageDemand;
         }
     }
-   
+
+    public float GetAverageBufferLevel()
+    {
+        if (!HasBuffer || FutureStates == null || !FutureStates.Any())
+            return 0f;
+
+        var bufferValues = FutureStates
+            .Where(state => state.Buffer.HasValue)
+            .Select(state => state.Buffer.Value);
+
+        return bufferValues.Any() ? (float)bufferValues.Average() : 0f;
+    }
+
 }
