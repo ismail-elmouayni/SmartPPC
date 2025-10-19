@@ -222,6 +222,61 @@
                                 </tbody>
                             </MudSimpleTable>
                         }
+
+                        <MudDivider Class="my-4" />
+
+                        <MudStack Row="true" Justify="Justify.Center" Class="mt-4">
+                            <MudButton OnClick="ToggleDemandTable"
+                                       Variant="Variant.Outlined"
+                                       Color="MudColor.Primary"
+                                       EndIcon="@(showDemandTable ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
+                                @(showDemandTable ? "Hide" : "Show") Demand Table
+                            </MudButton>
+                        </MudStack>
+
+                        @if (showDemandTable && Result?.Solution?.Stations != null)
+                        {
+                            <MudDivider Class="my-4" />
+                            <MudText Typo="Typo.h6" Class="mb-3">Demand by Station</MudText>
+
+                            <MudSelect T="int" Label="Select Station" Value="selectedStationIndex" ValueChanged="OnStationChanged" Class="mb-4" Variant="Variant.Outlined">
+                                @for (int i = 0; i < Result.Solution.Stations.Count; i++)
+                                {
+                                    var stationIndex = i;
+                                    <MudSelectItem T="int" Value="@stationIndex">Station @stationIndex</MudSelectItem>
+                                }
+                            </MudSelect>
+
+                            <MudSimpleTable Striped="true" Dense="true" Hover="true" Style="overflow-x: auto;">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        @foreach (var demandPoint in GetDemandData())
+                                        {
+                                            <th>@demandPoint.Period</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Demand</strong></td>
+                                        @foreach (var demandPoint in GetDemandData())
+                                        {
+                                            <td>
+                                                @if (demandPoint.Demand.HasValue)
+                                                {
+                                                    @demandPoint.Demand.Value
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                </tbody>
+                            </MudSimpleTable>
+                        }
                     }
                 </MudPaper>
             </MudItem>
@@ -240,6 +295,8 @@
     private bool isRunning { get; set; }
     private string? errorMessage { get; set; }
     private bool showFitnessTable { get; set; } = false;
+    private bool showDemandTable { get; set; } = false;
+    private int selectedStationIndex { get; set; } = 0;
     private ApexChart<FitnessPoint>? fitnessChart;
     private bool _previousDarkMode = false;
     private ApexChartOptions<FitnessPoint>? chartOptions;
@@ -353,6 +410,36 @@
     private void ToggleFitnessTable()
     {
         showFitnessTable = !showFitnessTable;
+    }
+
+    private void ToggleDemandTable()
+    {
+        showDemandTable = !showDemandTable;
+    }
+
+    private void OnStationChanged(int newStationIndex)
+    {
+        selectedStationIndex = newStationIndex;
+        StateHasChanged();
+    }
+
+    private List<DemandPoint> GetDemandData()
+    {
+        if (Result?.Solution?.Stations == null || selectedStationIndex >= Result.Solution.Stations.Count)
+            return new List<DemandPoint>();
+
+        var station = Result.Solution.Stations[selectedStationIndex];
+        if (station.FutureStates == null || !station.FutureStates.Any())
+            return new List<DemandPoint>();
+
+        return station.FutureStates
+            .Select(state => new DemandPoint
+            {
+                Period = state.Instant,
+                Demand = state.Demand
+            })
+            .OrderBy(d => d.Period)
+            .ToList();
     }
 
     private List<GeneDisplay> GetGeneDisplays()
@@ -528,5 +615,11 @@
     {
         public int Generation { get; set; }
         public double Fitness { get; set; }
+    }
+
+    public class DemandPoint
+    {
+        public int Period { get; set; }
+        public int? Demand { get; set; }
     }
 }
