@@ -6,6 +6,7 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
+<CascadingValue Value="_isDarkMode" Name="IsDarkMode">
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="MudColor.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
@@ -34,6 +35,7 @@
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+</CascadingValue>
 
 @code {
     private MudThemeProvider? _mudThemeProvider;

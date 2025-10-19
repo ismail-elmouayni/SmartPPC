@@ -6,6 +6,7 @@
 @using Newtonsoft.Json
 @inject ConfigurationService ConfigService
 @inject ILogger<SolverPage> Logger
+@inject IJSRuntime JSRuntime
 
 <div style="padding: 20px;">
     <MudGrid>
@@ -158,17 +159,21 @@
                         </MudText>
 
                         <div style="max-width: 900px; margin: 0 auto;">
-                            <ApexChart TItem="FitnessPoint"
-                                       Title=""
-                                       Options="GetChartOptions()">
-                                <ApexPointSeries TItem="FitnessPoint"
-                                                 Items="GetFitnessPoints()"
-                                                 Name="Best Fitness"
-                                                 SeriesType="SeriesType.Line"
-                                                 XValue="@(e => e.Generation)"
-                                                 YAggregate="@(e => e.Sum(f => (decimal)f.Fitness))"
-                                                 OrderBy="e => e.X" />
-                            </ApexChart>
+                            @if (chartOptions != null)
+                            {
+                                <ApexChart TItem="FitnessPoint"
+                                           Title=""
+                                           Options="chartOptions"
+                                           @ref="fitnessChart">
+                                    <ApexPointSeries TItem="FitnessPoint"
+                                                     Items="GetFitnessPoints()"
+                                                     Name="Best Fitness"
+                                                     SeriesType="SeriesType.Line"
+                                                     XValue="@(e => e.Generation)"
+                                                     YAggregate="@(e => e.Sum(f => (decimal)f.Fitness))"
+                                                     OrderBy="e => e.X" />
+                                </ApexChart>
+                            }
                         </div>
 
                         <MudStack Row="true" Justify="Justify.Center" Class="mt-4">
@@ -214,6 +219,9 @@
 </div>
 
 @code {
+    [CascadingParameter(Name = "IsDarkMode")]
+    public bool IsDarkMode { get; set; }
+
     private ModelInputs ModelInputs { get; set; } = new ModelInputs();
     private OptimizationResult? Result { get; set; }
     private bool HasConfiguration { get; set; }
@@ -221,6 +229,9 @@
     private bool isRunning { get; set; }
     private string? errorMessage { get; set; }
     private bool showFitnessTable { get; set; } = false;
+    private ApexChart<FitnessPoint>? fitnessChart;
+    private bool _previousDarkMode = false;
+    private ApexChartOptions<FitnessPoint>? chartOptions;
 
     protected override async Task OnInitializedAsync()
     {
@@ -238,6 +249,29 @@
             ModelInputs = ConfigService.CreateDefaultConfiguration();
             HasConfiguration = false;
             OutputStationsCount = 0;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Check if dark mode has changed
+        if (IsDarkMode != _previousDarkMode)
+        {
+            _previousDarkMode = IsDarkMode;
+            if (Result != null && Result.FitnessCurve != null && Result.FitnessCurve.Any())
+            {
+                UpdateChartOptions();
+            }
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && Result != null && Result.FitnessCurve != null && Result.FitnessCurve.Any())
+        {
+            _previousDarkMode = IsDarkMode;
+            UpdateChartOptions();
+            StateHasChanged();
         }
     }
 
@@ -276,6 +310,7 @@
             if (result.IsSuccess)
             {
                 Result = result.Value as OptimizationResult;
+                UpdateChartOptions();
                 Logger.LogInformation("Solver completed successfully. Objective value: {ObjectiveValue}",
                     Result?.Solution?.ObjectiveFunctionValue);
             }
@@ -350,15 +385,27 @@
         return points;
     }
 
-    private ApexChartOptions<FitnessPoint> GetChartOptions()
+    private void UpdateChartOptions()
     {
         if (Result?.FitnessCurve == null || !Result.FitnessCurve.Any())
-            return new ApexChartOptions<FitnessPoint>();
+        {
+            chartOptions = null;
+            return;
+        }
 
-        var options = new ApexChartOptions<FitnessPoint>
+        // Dynamic colors based on theme
+        var backgroundColor = IsDarkMode ? "#1e1e1e" : "#ffffff";
+        var textColor = IsDarkMode ? "#e0e0e0" : "#373d3f";
+        var gridColor = IsDarkMode ? "#4a4a4a" : "#e0e0e0";
+        var tooltipTheme = IsDarkMode ? Mode.Dark : Mode.Light;
+        var chartMode = IsDarkMode ? Mode.Dark : Mode.Light;
+
+        chartOptions = new ApexChartOptions<FitnessPoint>
         {
             Chart = new Chart
             {
+                Background = backgroundColor,
+                ForeColor = textColor,
                 Toolbar = new Toolbar
                 {
                     Show = true,
@@ -394,35 +441,67 @@
             Grid = new Grid
             {
                 Show = true,
-                BorderColor = "#e0e0e0",
+                BorderColor = gridColor,
                 StrokeDashArray = 3
             },
             Xaxis = new XAxis
             {
-                Title = new AxisTitle { Text = "Generation" }
+                Title = new AxisTitle
+                {
+                    Text = "Generation",
+                    Style = new AxisTitleStyle
+                    {
+                        Color = textColor
+                    }
+                },
+                Labels = new XAxisLabels
+                {
+                    Style = new AxisLabelStyle
+                    {
+                        Colors = new List<string> { textColor }
+                    }
+                }
             },
             Yaxis = new List<YAxis>
             {
                 new YAxis
                 {
-                    Title = new AxisTitle { Text = "Fitness Value" },
-                    DecimalsInFloat = 4
+                    Title = new AxisTitle
+                    {
+                        Text = "Fitness Value",
+                        Style = new AxisTitleStyle
+                        {
+                            Color = textColor
+                        }
+                    },
+                    DecimalsInFloat = 4,
+                    Labels = new YAxisLabels
+                    {
+                        Style = new AxisLabelStyle
+                        {
+                            Colors = new List<string> { textColor }
+                        }
+                    }
                 }
             },
             Tooltip = new Tooltip
             {
                 Enabled = true,
                 Shared = false,
-                FollowCursor = true
+                FollowCursor = true,
+                Theme = tooltipTheme,
+                Style = new TooltipStyle
+                {
+                    FontSize = "14px"
+                }
             },
             Theme = new Theme
             {
+                Mode = chartMode,
                 Palette = PaletteType.Palette1
             },
             Colors = new List<string> { "#1976d2" }
         };
-
-        return options;
     }
 
     public class GeneDisplay
