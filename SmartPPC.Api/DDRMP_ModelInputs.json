@@ -2,12 +2,12 @@
   "PlanningHorizon": 30,
   "PeakHorizon": 5,
   "PastHorizon": 3,
-  "PeakThreshold": 0.0,
+  "PeakThreshold": 100.0,
   "StationDeclarations": [
     {
       "StationIndex": 0,
       "ProcessingTime": 100.0,
-      "LeadTime": null,
+      "LeadTime": 2.0,
       "InitialBuffer": 20,
       "PastBuffer": [
         10,
@@ -19,7 +19,7 @@
         50,
         20
       ],
-      "DemandVariability": null,
+      "DemandVariability": 0.3,
       "DemandForecast": null,
       "NextStationsInput": [
         {
@@ -155,31 +155,7 @@
         45
       ],
       "NextStationsInput": null
-    },
-    {
-      "StationIndex": 4,
-      "ProcessingTime": 100.0,
-      "LeadTime": null,
-      "InitialBuffer": 0,
-      "PastBuffer": [
-        0,
-        0,
-        0
-      ],
-      "PastOrderAmount": [
-        0,
-        0,
-        0
-      ],
-      "DemandVariability": null,
-      "DemandForecast": null,
-      "NextStationsInput": [
-        {
-          "NextStationIndex": 1,
-          "InputAmount": 1
-        }
-      ]
     }
   ],
-  "NumberOfStations": 5
+  "NumberOfStations": 4
 }

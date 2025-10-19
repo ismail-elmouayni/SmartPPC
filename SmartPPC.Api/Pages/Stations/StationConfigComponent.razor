@@ -1,6 +1,5 @@
 @using SmartPPC.Core.Model.DDMRP
 @using SmartPPC.Api.Services
-@using MudBlazor
 @inject ConfigurationService ConfigService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -107,22 +106,22 @@
                                                          Min="1"
                                                          Style="max-width: 150px;" />
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                       Color="Color.Error"
+                                                       Color="MudColor.Error"
                                                        OnClick="@(() => RemoveNextStationInput(input))" />
                                     </MudStack>
                                 }
                             }
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="AddNextStationInput" StartIcon="@Icons.Material.Filled.Add">
+                            <MudButton Variant="Variant.Outlined" Color="MudColor.Primary" OnClick="AddNextStationInput" StartIcon="@Icons.Material.Filled.Add">
                                 Add Connection
                             </MudButton>
                         </MudItem>
 
                         <MudItem xs="12">
                             <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
-                                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="CancelStationEdit">
+                                <MudButton Variant="Variant.Outlined" Color="MudColor.Default" OnClick="CancelStationEdit">
                                     Cancel
                                 </MudButton>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveStationEdit">
+                                <MudButton Variant="Variant.Filled" Color="MudColor.Primary" OnClick="SaveStationEdit">
                                     Update Station
                                 </MudButton>
                             </MudStack>
@@ -146,7 +145,7 @@
                                      Selected="@(selectedStationIndex == station.StationIndex)">
                             <div>
                                 <MudText Typo="Typo.body1">Station @station.StationIndex</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Processing: @station.ProcessingTime</MudText>
+                                <MudText Typo="Typo.body2" Color="MudColor.Secondary">Processing: @station.ProcessingTime</MudText>
                             </div>
                         </MudListItem>
                         <MudDivider />
@@ -156,20 +155,20 @@
 
             <MudDivider Class="my-4" />
 
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddNewStation" FullWidth="true" StartIcon="@Icons.Material.Filled.Add">
+            <MudButton Variant="Variant.Filled" Color="MudColor.Primary" OnClick="AddNewStation" FullWidth="true" StartIcon="@Icons.Material.Filled.Add">
                 Add Station
             </MudButton>
 
             @if (selectedStation != null)
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="DeleteStation" FullWidth="true" StartIcon="@Icons.Material.Filled.Delete" Class="mt-2">
+                <MudButton Variant="Variant.Filled" Color="MudColor.Error" OnClick="DeleteStation" FullWidth="true" StartIcon="@Icons.Material.Filled.Delete" Class="mt-2">
                     Delete Station @selectedStationIndex
                 </MudButton>
             }
 
             <MudDivider Class="my-4" />
 
-            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="SaveConfiguration" FullWidth="true" StartIcon="@Icons.Material.Filled.Save">
+            <MudButton Variant="Variant.Filled" Color="MudColor.Success" OnClick="SaveConfiguration" FullWidth="true" StartIcon="@Icons.Material.Filled.Save">
                 Save All Changes
             </MudButton>
         </MudPaper>

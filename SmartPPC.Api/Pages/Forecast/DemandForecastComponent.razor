@@ -1,6 +1,5 @@
 @using SmartPPC.Core.Model.DDMRP
 @using SmartPPC.Api.Services
-@using MudBlazor
 @inject ConfigurationService ConfigService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -32,7 +31,7 @@
             <MudDivider Class="my-4" />
 
             <MudText Typo="Typo.h6" Class="mb-2">Forecast for Station @selectedStationIndex</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            <MudText Typo="Typo.body2" Color="MudColor.Secondary" Class="mb-4">
                 Planning Horizon: @ModelInputs.PlanningHorizon periods | Demand Variability: @selectedStation.DemandVariability
             </MudText>
 
@@ -58,19 +57,19 @@
 
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                 <MudStack Row="true" Spacing="2">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="FillWithZeros">
+                    <MudButton Variant="Variant.Outlined" Color="MudColor.Default" OnClick="FillWithZeros">
                         Fill with Zeros
                     </MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="FillWithAverage">
+                    <MudButton Variant="Variant.Outlined" Color="MudColor.Default" OnClick="FillWithAverage">
                         Fill with Average
                     </MudButton>
                 </MudStack>
 
                 <MudStack Row="true" Spacing="2">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="CancelEdit">
+                    <MudButton Variant="Variant.Outlined" Color="MudColor.Default" OnClick="CancelEdit">
                         Cancel
                     </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveForecast">
+                    <MudButton Variant="Variant.Filled" Color="MudColor.Primary" OnClick="SaveForecast">
                         Save Forecast
                     </MudButton>
                 </MudStack>

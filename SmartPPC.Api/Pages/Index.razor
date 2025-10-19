@@ -1,5 +1,4 @@
 @page "/"
-@using MudBlazor
 @using SmartPPC.Api.Services
 @using SmartPPC.Core.Model.DDMRP
 @inject ConfigurationService ConfigService
@@ -9,7 +8,7 @@
     <MudItem xs="12">
         <MudPaper Class="pa-6" Elevation="2">
             <MudText Typo="Typo.h3" Class="mb-2">SmartPPC - Production Planning & Control</MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary">
+            <MudText Typo="Typo.body1" Color="MudColor.Secondary">
                 Demand-Driven Material Requirements Planning (DDMRP) System
             </MudText>
         </MudPaper>
@@ -18,13 +17,13 @@
     <MudItem xs="12" md="6" lg="3">
         <MudCard Elevation="3" Class="pa-4">
             <MudCardContent>
-                <MudText Typo="Typo.h6" Color="Color.Primary">
+                <MudText Typo="Typo.h6" Color="MudColor.Primary">
                     <MudIcon Icon="@Icons.Material.Filled.Settings" /> General Settings
                 </MudText>
                 <MudText Typo="Typo.body2" Class="mt-2 mb-4">
                     Configure planning horizons and global parameters for the DDMRP model.
                 </MudText>
-                <MudButton Href="/Settings/GeneralSettings" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true">
+                <MudButton Href="/Settings/GeneralSettings" Variant="Variant.Filled" Color="MudColor.Primary" FullWidth="true">
                     Configure
                 </MudButton>
             </MudCardContent>
@@ -34,13 +33,13 @@
     <MudItem xs="12" md="6" lg="3">
         <MudCard Elevation="3" Class="pa-4">
             <MudCardContent>
-                <MudText Typo="Typo.h6" Color="Color.Primary">
+                <MudText Typo="Typo.h6" Color="MudColor.Primary">
                     <MudIcon Icon="@Icons.Material.Filled.AccountTree" /> Stations
                 </MudText>
                 <MudText Typo="Typo.body2" Class="mt-2 mb-4">
                     Define production stations, buffers, and flow connections.
                 </MudText>
-                <MudButton Href="/Stations/StationConfig" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true">
+                <MudButton Href="/Stations/StationConfig" Variant="Variant.Filled" Color="MudColor.Primary" FullWidth="true">
                     Configure
                 </MudButton>
             </MudCardContent>
@@ -50,13 +49,13 @@
     <MudItem xs="12" md="6" lg="3">
         <MudCard Elevation="3" Class="pa-4">
             <MudCardContent>
-                <MudText Typo="Typo.h6" Color="Color.Primary">
+                <MudText Typo="Typo.h6" Color="MudColor.Primary">
                     <MudIcon Icon="@Icons.Material.Filled.TrendingUp" /> Demand Forecast
                 </MudText>
                 <MudText Typo="Typo.body2" Class="mt-2 mb-4">
                     Set demand forecasts for output stations across planning horizon.
                 </MudText>
-                <MudButton Href="/Forecast/DemandForecast" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true">
+                <MudButton Href="/Forecast/DemandForecast" Variant="Variant.Filled" Color="MudColor.Primary" FullWidth="true">
                     Configure
                 </MudButton>
             </MudCardContent>
@@ -66,13 +65,13 @@
     <MudItem xs="12" md="6" lg="3">
         <MudCard Elevation="3" Class="pa-4">
             <MudCardContent>
-                <MudText Typo="Typo.h6" Color="Color.Primary">
+                <MudText Typo="Typo.h6" Color="MudColor.Primary">
                     <MudIcon Icon="@Icons.Material.Filled.PlayArrow" /> Solver
                 </MudText>
                 <MudText Typo="Typo.body2" Class="mt-2 mb-4">
                     Run the genetic algorithm solver to optimize production planning.
                 </MudText>
-                <MudButton Href="/SolverPage" Variant="Variant.Filled" Color="Color.Success" FullWidth="true">
+                <MudButton Href="/SolverPage" Variant="Variant.Filled" Color="MudColor.Success" FullWidth="true">
                     Run Solver
                 </MudButton>
             </MudCardContent>
@@ -83,13 +82,13 @@
         <MudPaper Class="pa-4" Elevation="2">
             <MudText Typo="Typo.h6" Class="mb-3">Configuration Status</MudText>
             <MudList T="string">
-                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(ModelInputs.PlanningHorizon > 0 ? Color.Success : Color.Default)">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(ModelInputs.PlanningHorizon > 0 ? MudColor.Success : MudColor.Default)">
                     <MudText>Planning Horizon: <strong>@ModelInputs.PlanningHorizon periods</strong></MudText>
                 </MudListItem>
-                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(ModelInputs.NumberOfStations > 0 ? Color.Success : Color.Default)">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(ModelInputs.NumberOfStations > 0 ? MudColor.Success : MudColor.Default)">
                     <MudText>Stations Configured: <strong>@ModelInputs.NumberOfStations</strong></MudText>
                 </MudListItem>
-                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(OutputStationsCount > 0 ? Color.Success : Color.Default)">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="@(OutputStationsCount > 0 ? MudColor.Success : MudColor.Default)">
                     <MudText>Output Stations: <strong>@OutputStationsCount</strong></MudText>
                 </MudListItem>
             </MudList>

@@ -1,6 +1,5 @@
 @using SmartPPC.Core.Model.DDMRP
 @using SmartPPC.Api.Services
-@using MudBlazor
 @inject ConfigurationService ConfigService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -52,10 +51,10 @@
         <MudDivider Class="my-6" />
 
         <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
-            <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="OnCancel">
+            <MudButton Variant="Variant.Outlined" Color="MudColor.Default" OnClick="OnCancel">
                 Cancel
             </MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnSave" Disabled="!success">
+            <MudButton Variant="Variant.Filled" Color="MudColor.Primary" OnClick="OnSave" Disabled="!success">
                 Save Configuration
             </MudButton>
         </MudStack>
