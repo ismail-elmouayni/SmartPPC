@@ -36,12 +36,16 @@
                                              Required="true" />
                         </MudItem>
 
-                        <MudItem xs="12" md="6">
-                            <MudNumericField @bind-Value="editLeadTime"
-                                             Label="Lead Time"
-                                             Variant="Variant.Outlined"
-                                             Min="0" />
-                        </MudItem>
+                        @if (IsSelectedStationInputStation)
+                        {
+                            <MudItem xs="12" md="6">
+                                <MudNumericField @bind-Value="editLeadTime"
+                                                 Label="Lead Time"
+                                                 Variant="Variant.Outlined"
+                                                 Min="0"
+                                                 HelperText="For input stations only" />
+                            </MudItem>
+                        }
 
                         <MudItem xs="12" md="6">
                             <MudNumericField @bind-Value="editInitialBuffer"
@@ -205,6 +209,25 @@
     // Check if the selected station is an output station (has no next stations)
     private bool IsSelectedStationOutputStation =>
         editNextStationsInput == null || editNextStationsInput.Count == 0;
+
+    // Check if the selected station is an input station (no other stations feed into it)
+    private bool IsSelectedStationInputStation
+    {
+        get
+        {
+            if (selectedStationIndex == null || ModelInputs.StationDeclarations == null)
+                return false;
+
+            // Get all station indices that receive input from other stations
+            var stationsWithInput = ModelInputs.StationDeclarations
+                .Where(s => s.NextStationsInput != null)
+                .SelectMany(s => s.NextStationsInput!.Select(ni => ni.NextStationIndex))
+                .ToHashSet();
+
+            // Input station = NOT in the list of stations that receive input
+            return !stationsWithInput.Contains(selectedStationIndex.Value);
+        }
+    }
 
     protected override void OnInitialized()
     {
