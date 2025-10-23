@@ -50,13 +50,16 @@
                                              Min="0" />
                         </MudItem>
 
-                        <MudItem xs="12" md="6">
-                            <MudNumericField @bind-Value="editDemandVariability"
-                                             Label="Demand Variability"
-                                             Variant="Variant.Outlined"
-                                             Min="0"
-                                             HelperText="For output stations only" />
-                        </MudItem>
+                        @if (IsSelectedStationOutputStation)
+                        {
+                            <MudItem xs="12" md="6">
+                                <MudNumericField @bind-Value="editDemandVariability"
+                                                 Label="Demand Variability"
+                                                 Variant="Variant.Outlined"
+                                                 Min="0"
+                                                 HelperText="For output stations only" />
+                            </MudItem>
+                        }
 
                         <MudItem xs="12">
                             <MudText Typo="Typo.subtitle2" Class="mb-2">Past Buffer (Length: @ModelInputs.PastHorizon)</MudText>
@@ -198,6 +201,10 @@
         public int NextStationIndex { get; set; }
         public int InputAmount { get; set; }
     }
+
+    // Check if the selected station is an output station (has no next stations)
+    private bool IsSelectedStationOutputStation =>
+        editNextStationsInput == null || editNextStationsInput.Count == 0;
 
     protected override void OnInitialized()
     {
