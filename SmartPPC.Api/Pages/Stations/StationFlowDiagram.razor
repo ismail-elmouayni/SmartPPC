@@ -1,10 +1,13 @@
 @using SmartPPC.Core.Model.DDMRP
 
-<svg width="100%" height="400" viewBox="0 0 800 400" style="border: 1px solid #e0e0e0; background-color: white;">
+@{
+    var stationPositions = CalculateStationPositions();
+    var (svgWidth, svgHeight) = CalculateSvgDimensions(stationPositions);
+}
+
+<svg width="100%" height="@svgHeight" viewBox="0 0 @svgWidth @svgHeight" style="border: 1px solid #e0e0e0; background-color: white;">
     @if (Stations != null && Stations.Any())
     {
-        @* Calculate positions for stations in a flow layout *@
-        var stationPositions = CalculateStationPositions();
 
         @* Draw connections first (so they appear behind stations) *@
         @foreach (var station in Stations)
@@ -17,12 +20,28 @@
                     var toPos = stationPositions.GetValueOrDefault(next.NextStationIndex);
                     if (fromPos != default && toPos != default)
                     {
-                        <line x1="@(fromPos.X + 60)" y1="@(fromPos.Y + 30)"
-                              x2="@(toPos.X)" y2="@(toPos.Y + 30)"
-                              stroke="#666" stroke-width="2" marker-end="url(#arrowhead)" />
+                        var x1 = fromPos.X + 120;  // Right edge of source station
+                        var y1 = fromPos.Y + 30;    // Middle of source station
+                        var x2 = toPos.X;           // Left edge of target station
+                        var y2 = toPos.Y + 30;      // Middle of target station
+
+                        // Create curved path using cubic bezier
+                        var controlPointOffset = Math.Abs(x2 - x1) * 0.5;
+                        var cx1 = x1 + controlPointOffset;
+                        var cy1 = y1;
+                        var cx2 = x2 - controlPointOffset;
+                        var cy2 = y2;
+
+                        var pathData = $"M {x1} {y1} C {cx1} {cy1}, {cx2} {cy2}, {x2} {y2}";
+
+                        <path d="@pathData"
+                              stroke="#666"
+                              stroke-width="2"
+                              fill="none"
+                              marker-end="url(#arrowhead)" />
 
                         @* Label for input amount *@
-                        @((MarkupString)$"<text x=\"{(fromPos.X + toPos.X) / 2 + 30}\" y=\"{(fromPos.Y + toPos.Y) / 2 + 20}\" font-size=\"12\" fill=\"#666\">×{next.InputAmount}</text>")
+                        @((MarkupString)$"<text x=\"{(x1 + x2) / 2}\" y=\"{(y1 + y2) / 2 - 5}\" font-size=\"12\" fill=\"#666\" text-anchor=\"middle\">×{next.InputAmount}</text>")
                     }
                 }
             }
@@ -86,6 +105,145 @@
     [Parameter]
     public int? SelectedStationIndex { get; set; }
 
+    private Dictionary<int, int> AssignStationsToLayers()
+    {
+        var layers = new Dictionary<int, int>();
+
+        if (Stations == null || !Stations.Any())
+            return layers;
+
+        // Build reverse adjacency list (who feeds into each station)
+        var incomingEdges = new Dictionary<int, List<int>>();
+        var allStationIndices = new HashSet<int>();
+
+        foreach (var station in Stations.Where(s => s.StationIndex.HasValue))
+        {
+            var stationIdx = station.StationIndex!.Value;
+            allStationIndices.Add(stationIdx);
+
+            if (!incomingEdges.ContainsKey(stationIdx))
+                incomingEdges[stationIdx] = new List<int>();
+
+            if (station.NextStationsInput != null)
+            {
+                foreach (var next in station.NextStationsInput)
+                {
+                    if (!incomingEdges.ContainsKey(next.NextStationIndex))
+                        incomingEdges[next.NextStationIndex] = new List<int>();
+                    incomingEdges[next.NextStationIndex].Add(stationIdx);
+                }
+            }
+        }
+
+        // Find input stations (no incoming edges)
+        var inputStations = allStationIndices.Where(idx =>
+            !incomingEdges.ContainsKey(idx) || !incomingEdges[idx].Any()).ToList();
+
+        // Assign layers using BFS
+        var queue = new Queue<int>();
+        foreach (var inputStation in inputStations)
+        {
+            layers[inputStation] = 0;
+            queue.Enqueue(inputStation);
+        }
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            var currentLayer = layers[current];
+            var currentStation = Stations.FirstOrDefault(s => s.StationIndex == current);
+
+            if (currentStation?.NextStationsInput != null)
+            {
+                foreach (var next in currentStation.NextStationsInput)
+                {
+                    var nextIdx = next.NextStationIndex;
+                    var newLayer = currentLayer + 1;
+
+                    if (!layers.ContainsKey(nextIdx) || layers[nextIdx] < newLayer)
+                    {
+                        layers[nextIdx] = newLayer;
+                        queue.Enqueue(nextIdx);
+                    }
+                }
+            }
+        }
+
+        return layers;
+    }
+
+    private Dictionary<int, int> CalculateVerticalPositions(Dictionary<int, int> layers)
+    {
+        var verticalPositions = new Dictionary<int, int>();
+
+        if (Stations == null || !Stations.Any())
+            return verticalPositions;
+
+        const int stationHeight = 60;
+        const int verticalSpacing = 72; // 60 + 20% margin
+
+        // Group stations by layer
+        var stationsByLayer = layers.GroupBy(kvp => kvp.Value)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.Select(kvp => kvp.Key).ToList());
+
+        // Assign vertical positions layer by layer
+        foreach (var layer in stationsByLayer.Keys.OrderBy(k => k))
+        {
+            var stationsInLayer = stationsByLayer[layer];
+            var layerHeight = stationsInLayer.Count * verticalSpacing;
+            var startY = 0;
+
+            // If this is not the first layer, try to position stations relative to their predecessors
+            if (layer > 0)
+            {
+                var predecessorPositions = new List<int>();
+                foreach (var stationIdx in stationsInLayer)
+                {
+                    var station = Stations.FirstOrDefault(s => s.StationIndex == stationIdx);
+                    // Find all stations that feed into this one
+                    var predecessors = Stations
+                        .Where(s => s.NextStationsInput != null &&
+                               s.NextStationsInput.Any(n => n.NextStationIndex == stationIdx) &&
+                               verticalPositions.ContainsKey(s.StationIndex!.Value))
+                        .Select(s => verticalPositions[s.StationIndex!.Value])
+                        .ToList();
+
+                    if (predecessors.Any())
+                        predecessorPositions.Add((int)predecessors.Average());
+                }
+
+                if (predecessorPositions.Any())
+                    startY = predecessorPositions.Min() - (stationsInLayer.Count / 2) * verticalSpacing;
+            }
+
+            for (int i = 0; i < stationsInLayer.Count; i++)
+            {
+                verticalPositions[stationsInLayer[i]] = startY + i * verticalSpacing;
+            }
+        }
+
+        return verticalPositions;
+    }
+
+    private (int Width, int Height) CalculateSvgDimensions(Dictionary<int, (int X, int Y)> positions)
+    {
+        if (positions.Count == 0)
+            return (800, 400);
+
+        const int padding = 100;
+        const int stationWidth = 120;
+        const int stationHeight = 60;
+
+        var maxX = positions.Values.Max(p => p.X) + stationWidth + padding;
+        var maxY = positions.Values.Max(p => p.Y) + stationHeight + padding;
+        var minY = positions.Values.Min(p => p.Y);
+
+        var height = maxY - minY + padding;
+
+        return (maxX, Math.Max(400, height));
+    }
+
     private Dictionary<int, (int X, int Y)> CalculateStationPositions()
     {
         var positions = new Dictionary<int, (int X, int Y)>();
@@ -93,26 +251,30 @@
         if (Stations == null || !Stations.Any())
             return positions;
 
-        // Simple layout: arrange stations in rows
-        int stationsPerRow = 4;
-        int xSpacing = 180;
-        int ySpacing = 120;
-        int startX = 50;
-        int startY = 50;
+        // Step 1: Assign stations to horizontal layers
+        var layers = AssignStationsToLayers();
 
-        for (int i = 0; i < Stations.Count; i++)
+        // Step 2: Calculate vertical positions
+        var verticalPositions = CalculateVerticalPositions(layers);
+
+        // Step 3: Combine into final positions
+        const int horizontalSpacing = 200;
+        const int startX = 50;
+        const int startY = 50;
+
+        // Find the minimum vertical position to offset everything
+        var minY = verticalPositions.Values.Any() ? verticalPositions.Values.Min() : 0;
+        var yOffset = startY - minY;
+
+        foreach (var stationIdx in layers.Keys)
         {
-            var station = Stations[i];
-            if (station.StationIndex.HasValue)
-            {
-                int row = i / stationsPerRow;
-                int col = i % stationsPerRow;
+            var layer = layers[stationIdx];
+            var vPos = verticalPositions.GetValueOrDefault(stationIdx, 0);
 
-                positions[station.StationIndex.Value] = (
-                    startX + col * xSpacing,
-                    startY + row * ySpacing
-                );
-            }
+            positions[stationIdx] = (
+                startX + layer * horizontalSpacing,
+                vPos + yOffset
+            );
         }
 
         return positions;
