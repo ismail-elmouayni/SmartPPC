@@ -10,7 +10,8 @@
     @if (outputStations == null || !outputStations.Any())
     {
         <MudAlert Severity="Severity.Info">
-            No output stations configured. Please configure stations with demand forecast first.
+            No output stations found. Output stations are stations at the end of the production line (with no next stations).
+            Please configure your station flow in Station Configuration first.
         </MudAlert>
     }
     else
@@ -106,8 +107,9 @@
 
     private void LoadOutputStations()
     {
+        // Output stations are those with no next stations (end of production line)
         outputStations = ModelInputs.StationDeclarations?
-            .Where(s => s.DemandForecast != null || s.DemandVariability.HasValue)
+            .Where(s => s.NextStationsInput == null || !s.NextStationsInput.Any())
             .ToList();
     }
 
