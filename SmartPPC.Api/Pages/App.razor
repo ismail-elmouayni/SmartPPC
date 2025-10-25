@@ -1,0 +1,31 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Authorization
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Pages.Shared.AppLayout)">
+                <Authorizing>
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+                        <MudProgressCircular Color="MudBlazor.Color.Primary" Indeterminate="true" Size="MudBlazor.Size.Large" />
+                    </div>
+                </Authorizing>
+                <NotAuthorized>
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+                        <MudText Typo="Typo.h5" Class="mb-4">Access Denied</MudText>
+                        <MudText Typo="Typo.body1" Class="mb-4">You need to be logged in to access this page.</MudText>
+                        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" Href="/Authentication/Login">
+                            Go to Login
+                        </MudButton>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(Pages.Shared.AppLayout)">
+                <p>Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

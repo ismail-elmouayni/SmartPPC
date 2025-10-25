@@ -1,5 +1,7 @@
 @inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
 <MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
 <MudPopoverProvider />
@@ -16,6 +18,32 @@
                        Color="MudColor.Inherit"
                        OnClick="@ToggleDarkMode"
                        Title="Toggle Dark Mode" />
+
+        <AuthorizeView>
+            <Authorized>
+                <MudMenu Icon="@Icons.Material.Filled.AccountCircle"
+                         Color="MudColor.Inherit"
+                         AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight"
+                         Dense="true">
+                    <MudMenuItem Icon="@Icons.Material.Filled.Person" OnClick="@GoToProfile">
+                        Profile
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="@HandleLogout">
+                        Logout
+                    </MudMenuItem>
+                </MudMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Variant="Variant.Text"
+                               Color="MudColor.Inherit"
+                           Href="/Authentication/Login"
+                           StartIcon="@Icons.Material.Filled.Login">
+                    Login
+                </MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
     </MudAppBar>
 
     <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
@@ -51,13 +79,26 @@
         }
     }
 
-    private void ToggleDarkMode()
+    private Task ToggleDarkMode()
     {
         _isDarkMode = !_isDarkMode;
+        return Task.CompletedTask;
     }
 
-    private void ToggleDrawer()
+    private Task ToggleDrawer()
     {
         _drawerOpen = !_drawerOpen;
+        return Task.CompletedTask;
+    }
+
+    private Task GoToProfile()
+    {
+        Navigation.NavigateTo("/Profile");
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleLogout()
+    {
+        await JSRuntime.InvokeVoidAsync("logoutUser");
     }
 }

@@ -1,0 +1,31 @@
+@page "/Authentication/AccessDenied"
+
+<PageTitle>Access Denied - SmartPPC</PageTitle>
+
+<style>
+    .access-denied-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .access-denied-card {
+        max-width: 500px;
+        text-align: center;
+    }
+</style>
+
+<div class="access-denied-container">
+    <MudPaper Class="access-denied-card" Elevation="8" Style="padding: 3rem;">
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="MudBlazor.Color.Error" Size="MudBlazor.Size.Large" Style="font-size: 5rem; margin-bottom: 1rem;" />
+        <MudText Typo="Typo.h4" GutterBottom="true">Access Denied</MudText>
+        <MudText Typo="Typo.body1" Color="MudBlazor.Color.Default" Style="margin-bottom: 2rem;">
+            You don't have permission to access this page.
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" Href="/" Size="MudBlazor.Size.Large">
+            Go to Home
+        </MudButton>
+    </MudPaper>
+</div>

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartppc_postgres
+    environment:
+      POSTGRES_DB: smartppc_dev
+      POSTGRES_USER: smartppc_user
+      POSTGRES_PASSWORD: smartppc_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartppc_user -d smartppc_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smartppc_network
+
+  # pgAdmin - PostgreSQL Management Tool (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: smartppc_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@smartppc.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - smartppc_network
+    profiles:
+      - dev-tools
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  smartppc_network:
+    driver: bridge

@@ -1,0 +1,220 @@
+@page "/Profile"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SmartPPC.Core.Domain
+@using SmartPPC.Api.Pages.Profile
+@inject UserManager<User> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Profile - SmartPPC</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2" />
+        My Profile
+    </MudText>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="my-4" />
+    }
+    else if (_user != null)
+    {
+        <!-- General Information Section -->
+        <MudPaper Class="pa-6 mt-4" Elevation="2">
+            <MudText Typo="Typo.h5" GutterBottom="true" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                General Information
+            </MudText>
+
+            <EditForm Model="@_user" OnValidSubmit="HandleSaveProfile">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_user.Email"
+                                      Label="Email"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="true"
+                                      Disabled="true"
+                                      HelperText="Email cannot be changed"
+                                      FullWidth="true" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_user.FirstName"
+                                      Label="First Name (Optional)"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_user.LastName"
+                                      Label="Last Name (Optional)"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_user.PhoneNumber"
+                                      Label="Phone (Optional)"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_user.Address"
+                                      Label="Address (Optional)"
+                                      Variant="Variant.Outlined"
+                                      Lines="2"
+                                      FullWidth="true" />
+                    </MudItem>
+
+                    <MudItem xs="12" Class="d-flex justify-end">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="MudBlazor.Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   Disabled="@_isSaving">
+                            @if (_isSaving)
+                            {
+                                <MudProgressCircular Size="MudBlazor.Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>Save Changes</span>
+                            }
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </EditForm>
+        </MudPaper>
+
+        <!-- Security Section -->
+        <MudPaper Class="pa-6 mt-6" Elevation="2">
+            <MudText Typo="Typo.h5" GutterBottom="true" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2" />
+                Security
+            </MudText>
+
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField Value="@_passwordDisplay"
+                                  Label="Password"
+                                  Variant="Variant.Outlined"
+                                  InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                  ReadOnly="true"
+                                  FullWidth="true"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                  OnAdornmentClick="TogglePasswordVisibility" />
+                </MudItem>
+
+                <MudItem xs="12" Class="d-flex justify-end">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="MudBlazor.Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Lock"
+                               OnClick="OpenChangePasswordDialog">
+                        Change Password
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Account Information -->
+        <MudPaper Class="pa-6 mt-6" Elevation="1">
+            <MudText Typo="Typo.body2" Color="MudBlazor.Color.Default">
+                <strong>Account Created:</strong> @_user.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy")
+            </MudText>
+            <MudText Typo="Typo.body2" Color="MudBlazor.Color.Default" Class="mt-2">
+                <strong>Last Updated:</strong> @_user.UpdatedAt.ToLocalTime().ToString("MMMM dd, yyyy HH:mm")
+            </MudText>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private User? _user;
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private bool _showPassword = false;
+    private string _passwordDisplay = "**********";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+    }
+
+    private async Task LoadUserProfile()
+    {
+        _isLoading = true;
+
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userPrincipal = authState.User;
+
+            if (userPrincipal.Identity?.IsAuthenticated == true)
+            {
+                _user = await UserManager.GetUserAsync(userPrincipal);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleSaveProfile()
+    {
+        if (_user == null) return;
+
+        _isSaving = true;
+
+        try
+        {
+            _user.UpdatedAt = DateTime.UtcNow;
+            var result = await UserManager.UpdateAsync(_user);
+
+            if (result.Succeeded)
+            {
+                Snackbar.Add("Profile updated successfully!", Severity.Success);
+            }
+            else
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                Snackbar.Add($"Failed to update profile: {errors}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        _showPassword = !_showPassword;
+    }
+
+    private async Task OpenChangePasswordDialog()
+    {
+        var dialog = await DialogService.ShowAsync<ChangePasswordModal>("Change Password");
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Password changed successfully!", Severity.Success);
+        }
+    }
+}

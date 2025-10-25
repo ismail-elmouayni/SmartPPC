@@ -1,16 +1,42 @@
 @page "/"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 @using SmartPPC.Api.Services
 @using SmartPPC.Core.Model.DDMRP
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Text.Json
 @inject ConfigurationService ConfigService
 @inject ILogger<Index> Logger
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
 <MudGrid>
     <MudItem xs="12">
         <MudPaper Class="pa-6" Elevation="2">
-            <MudText Typo="Typo.h3" Class="mb-2">SmartPPC - Production Planning & Control</MudText>
-            <MudText Typo="Typo.body1" Color="MudColor.Secondary">
-                Demand-Driven Material Requirements Planning (DDMRP) System
-            </MudText>
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <div>
+                    <MudText Typo="Typo.h3" Class="mb-2">SmartPPC - Production Planning & Control</MudText>
+                    <MudText Typo="Typo.body1" Color="MudColor.Secondary">
+                        Demand-Driven Material Requirements Planning (DDMRP) System
+                    </MudText>
+                </div>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="MudColor.Primary"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               OnClick="DownloadConfiguration">
+                        Download Config
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="MudColor.Primary"
+                               StartIcon="@Icons.Material.Filled.Upload"
+                               OnClick="TriggerFileUpload">
+                        Upload Config
+                    </MudButton>
+                    <InputFile id="fileUpload" OnChange="UploadConfiguration" style="display: none;" accept=".json" />
+                </MudStack>
+            </MudStack>
         </MudPaper>
     </MudItem>
 
@@ -122,6 +148,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadConfigurationData();
+    }
+
+    private async Task LoadConfigurationData()
+    {
         try
         {
             var config = await ConfigService.LoadConfigurationAsync();
@@ -129,12 +160,109 @@
 
             OutputStationsCount = ModelInputs.StationDeclarations?
                 .Count(s => s.DemandForecast != null || s.DemandVariability.HasValue) ?? 0;
+
+            StateHasChanged(); // Refresh the UI
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading configuration");
             ModelInputs = ConfigService.CreateDefaultConfiguration();
             OutputStationsCount = 0;
+        }
+    }
+
+    private async Task DownloadConfiguration()
+    {
+        try
+        {
+            var config = await ConfigService.LoadConfigurationAsync();
+            if (config == null)
+            {
+                Snackbar.Add("No configuration available to download", Severity.Warning);
+                return;
+            }
+
+            var jsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(config, Newtonsoft.Json.Formatting.Indented);
+            var fileName = $"SmartPPC_Config_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json";
+
+            // Use JavaScript interop to trigger download
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, jsonContent);
+            Snackbar.Add("Configuration downloaded successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error downloading configuration");
+            Snackbar.Add($"Error downloading configuration: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task TriggerFileUpload()
+    {
+        // Trigger the hidden file input
+        await JSRuntime.InvokeVoidAsync("document.getElementById('fileUpload').click");
+    }
+
+    private async Task UploadConfiguration(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            if (file == null)
+            {
+                Snackbar.Add("No file selected", Severity.Warning);
+                return;
+            }
+
+            // Validate file extension
+            if (!file.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                Snackbar.Add("Please upload a JSON file", Severity.Error);
+                return;
+            }
+
+            // Read file content
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB max
+            using var reader = new StreamReader(stream);
+            var jsonContent = await reader.ReadToEndAsync();
+
+            // Deserialize to ModelInputs
+            ModelInputs? uploadedConfig;
+            try
+            {
+                uploadedConfig = Newtonsoft.Json.JsonConvert.DeserializeObject<ModelInputs>(jsonContent);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Invalid JSON format: {ex.Message}", Severity.Error);
+                return;
+            }
+
+            if (uploadedConfig == null)
+            {
+                Snackbar.Add("Failed to parse configuration file", Severity.Error);
+                return;
+            }
+
+            // Validate configuration with business rules
+            var validationResult = await ConfigService.ValidateConfigurationWithBusinessRules(uploadedConfig);
+            if (!validationResult.IsSuccess)
+            {
+                var errorMessage = string.Join("\n", validationResult.Errors);
+                Snackbar.Add($"Configuration validation failed:\n{errorMessage}", Severity.Error);
+                return;
+            }
+
+            // Save configuration
+            await ConfigService.SaveConfigurationAsync(uploadedConfig);
+            Snackbar.Add("Configuration uploaded and saved successfully!", Severity.Success);
+
+            // Reload the configuration data to update the UI
+            await LoadConfigurationData();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error uploading configuration");
+            Snackbar.Add($"Error uploading configuration: {ex.Message}", Severity.Error);
         }
     }
 }

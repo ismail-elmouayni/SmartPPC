@@ -4,7 +4,10 @@
       "WebSearch",
       "Bash(awk:*)",
       "Bash(dotnet build)",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "Bash(dotnet build:*)",
+      "WebFetch(domain:mudblazor.com)",
+      "WebFetch(domain:medium.com)"
     ],
     "deny": [],
     "ask": []

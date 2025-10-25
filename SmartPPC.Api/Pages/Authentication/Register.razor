@@ -1,0 +1,295 @@
+@page "/Authentication/Register"
+@layout SmartPPC.Api.Pages.Shared.EmptyLayout
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Register - SmartPPC</PageTitle>
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .register-container {
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    .theme-toggle {
+        position: absolute;
+        top: 1.5rem;
+        right: 1.5rem;
+        z-index: 10;
+    }
+
+    .logo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .triangle-logo {
+        width: 48px;
+        height: 48px;
+    }
+
+    .register-card {
+        width: 100%;
+        max-width: 450px;
+    }
+
+    .register-card-content {
+        padding: 3rem;
+    }
+
+    @@media (max-width: 600px) {
+        .register-card {
+            max-width: 100%;
+        }
+
+        .register-card-content {
+            padding: 2rem 1.5rem;
+        }
+    }
+
+    .register-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .register-title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .register-subtitle {
+        opacity: 0.7;
+    }
+
+    .app-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 1.5rem 0;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .divider span {
+        padding: 0 10px;
+        color: #999;
+        font-size: 0.875rem;
+    }
+</style>
+
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="register-container">
+    <div class="theme-toggle">
+        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                       Color="MudColor.Inherit"
+                       OnClick="@ToggleDarkMode"
+                       Title="Toggle Dark Mode" />
+    </div>
+    <MudPaper Class="register-card" Elevation="8">
+        <MudCardContent Class="register-card-content">
+            <div class="register-header">
+                <div class="logo-container">
+                    <svg class="triangle-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="triangleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:var(--mud-palette-primary);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:var(--mud-palette-secondary);stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 50 10 L 90 80 L 10 80 Z" fill="url(#triangleGradient)" stroke="var(--mud-palette-primary)" stroke-width="2"/>
+                    </svg>
+                    <h1 class="app-title">SmartPPC</h1>
+                </div>
+                <div class="register-title">Create Account</div>
+                <div class="register-subtitle">Join SmartPPC to get started</div>
+            </div>
+
+            <EditForm Model="@_model" OnValidSubmit="HandleRegister">
+                <DataAnnotationsValidator />
+
+                <MudTextField @bind-Value="_model.Email"
+                              Label="Email"
+                              Variant="Variant.Outlined"
+                              InputType="InputType.Email"
+                              Required="true"
+                              RequiredError="Email is required"
+                              FullWidth="true"
+                              Margin="Margin.Dense"
+                              Class="mb-3" />
+
+                <MudTextField @bind-Value="_model.Password"
+                              Label="Password"
+                              Variant="Variant.Outlined"
+                              InputType="InputType.Password"
+                              Required="true"
+                              RequiredError="Password is required"
+                              FullWidth="true"
+                              Margin="Margin.Dense"
+                              Class="mb-3"
+                              HelperText="At least 6 characters with uppercase, lowercase, and digit" />
+
+                <MudTextField @bind-Value="_model.ConfirmPassword"
+                              Label="Confirm Password"
+                              Variant="Variant.Outlined"
+                              InputType="InputType.Password"
+                              Required="true"
+                              RequiredError="Please confirm your password"
+                              FullWidth="true"
+                              Margin="Margin.Dense"
+                              Class="mb-4" />
+
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="MudBlazor.Color.Primary"
+                           FullWidth="true"
+                           Size="MudBlazor.Size.Large"
+                           Disabled="@_isLoading"
+                           Class="mt-2">
+                    @if (_isLoading)
+                    {
+                        <MudProgressCircular Size="MudBlazor.Size.Small" Indeterminate="true" />
+                        <span class="ml-2">Creating account...</span>
+                    }
+                    else
+                    {
+                        <span>Create Account</span>
+                    }
+                </MudButton>
+            </EditForm>
+
+            <div class="divider">
+                <span>Already have an account?</span>
+            </div>
+
+            <MudButton Variant="Variant.Outlined"
+                       Color="MudBlazor.Color.Primary"
+                       FullWidth="true"
+                       Href="/Authentication/Login">
+                Sign In
+            </MudButton>
+        </MudCardContent>
+    </MudPaper>
+</div>
+
+@code {
+    private MudThemeProvider? _mudThemeProvider;
+    private bool _isDarkMode = false;
+    private RegisterModel _model = new();
+    private bool _isLoading = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _mudThemeProvider != null)
+        {
+            _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            StateHasChanged();
+        }
+    }
+
+    private Task ToggleDarkMode()
+    {
+        _isDarkMode = !_isDarkMode;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleRegister()
+    {
+        if (_isLoading)
+            return; // already processing a registration
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Validate passwords match
+            if (_model.Password != _model.ConfirmPassword)
+            {
+                Snackbar.Add("Passwords do not match.", Severity.Error);
+                _isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Use JavaScript fetch to make the call from the browser (not server)
+            // This ensures cookies are properly set in the browser
+            var result = await JSRuntime.InvokeAsync<RegistrationResult>("registerUser",
+                _model.Email, _model.Password, _model.ConfirmPassword);
+
+            if (result.Success)
+            {
+                // JavaScript will handle the redirect
+                return;
+            }
+
+            // Handle errors
+            if (result.Errors != null && result.Errors.Length > 0)
+            {
+                var errorMessages = string.Join(", ", result.Errors);
+                Snackbar.Add($"Registration failed: {errorMessages}", Severity.Error);
+            }
+            else if (!string.IsNullOrEmpty(result.Error))
+            {
+                Snackbar.Add($"Registration failed: {result.Error}", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("Registration failed. Please try again.", Severity.Error);
+            }
+
+            _isLoading = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private class RegistrationResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+        public string[]? Errors { get; set; }
+    }
+
+    private class RegisterModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

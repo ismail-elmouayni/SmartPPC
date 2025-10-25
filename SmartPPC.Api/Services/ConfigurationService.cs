@@ -1,7 +1,17 @@
 using Newtonsoft.Json;
 using SmartPPC.Core.Model.DDMRP;
+using System.Collections.Generic;
 
 namespace SmartPPC.Api.Services;
+
+public class ValidationResult
+{
+    public bool IsSuccess { get; set; }
+    public List<string> Errors { get; set; } = new List<string>();
+
+    public static ValidationResult Success() => new ValidationResult { IsSuccess = true };
+    public static ValidationResult Fail(params string[] errors) => new ValidationResult { IsSuccess = false, Errors = errors.ToList() };
+}
 
 public class ConfigurationService
 {
@@ -87,5 +97,38 @@ public class ConfigurationService
                     throw new ArgumentException($"Station {station.StationIndex}: DemandForecast length must match PlanningHorizon ({modelInputs.PlanningHorizon})");
             }
         }
+    }
+
+    public async Task<ValidationResult> ValidateConfigurationWithBusinessRules(ModelInputs modelInputs)
+    {
+        var errors = new List<string>();
+
+        // Basic validation
+        try
+        {
+            ValidateConfiguration(modelInputs);
+        }
+        catch (Exception ex)
+        {
+            errors.Add(ex.Message);
+        }
+
+        // Business logic validation using ModelBuilder
+        try
+        {
+            var modelResult = ModelBuilder.CreateFromInputs(modelInputs);
+            if (modelResult.IsFailed)
+            {
+                errors.AddRange(modelResult.Errors.Select(e => e.Message));
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Business validation failed: {ex.Message}");
+        }
+
+        return await Task.FromResult(errors.Any()
+            ? ValidationResult.Fail(errors.ToArray())
+            : ValidationResult.Success());
     }
 }
