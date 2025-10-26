@@ -85,7 +85,22 @@
     public ModelInputs ModelInputs { get; set; } = new ModelInputs();
 
     private List<StationDeclaration>? outputStations;
-    private int? selectedStationIndex;
+    private int? _selectedStationIndex;
+    private int? selectedStationIndex
+    {
+        get => _selectedStationIndex;
+        set
+        {
+            if (_selectedStationIndex != value)
+            {
+                _selectedStationIndex = value;
+                if (value.HasValue)
+                {
+                    LoadForecastForStation(value.Value);
+                }
+            }
+        }
+    }
     private StationDeclaration? selectedStation;
     private List<ForecastRow> forecastData = new List<ForecastRow>();
 
@@ -95,14 +110,6 @@
         if (outputStations != null && outputStations.Any() && !selectedStationIndex.HasValue)
         {
             selectedStationIndex = outputStations.First().StationIndex;
-        }
-    }
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        if (selectedStationIndex.HasValue)
-        {
-            LoadForecastForStation(selectedStationIndex.Value);
         }
     }
 
