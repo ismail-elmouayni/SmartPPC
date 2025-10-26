@@ -5,11 +5,15 @@
 @using SmartPPC.Core.Model.DDMRP
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Text.Json
+@using MudBlazor
+@using SmartPPC.Api.Pages.Shared
 @inject ConfigurationService ConfigService
+@inject ConfigurationStateService StateService
 @inject ILogger<Index> Logger
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
 
 <MudGrid>
     <MudItem xs="12">
@@ -20,21 +24,49 @@
                     <MudText Typo="Typo.body1" Color="MudColor.Secondary">
                         Demand-Driven Material Requirements Planning (DDMRP) System
                     </MudText>
+                    @if (!string.IsNullOrEmpty(currentConfigName))
+                    {
+                        <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudColor.Success" Class="mt-2">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="MudBlazor.Size.Small" Class="mr-1" />
+                            @currentConfigName
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudColor.Warning" Class="mt-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="MudBlazor.Size.Small" Class="mr-1" />
+                            No configuration loaded
+                        </MudChip>
+                    }
                 </div>
                 <MudStack Row="true" Spacing="2">
                     <MudButton Variant="Variant.Outlined"
                                Color="MudColor.Primary"
-                               StartIcon="@Icons.Material.Filled.Download"
-                               OnClick="DownloadConfiguration">
-                        Download Config
+                               StartIcon="@Icons.Material.Filled.FolderOpen"
+                               OnClick="OpenLoadConfigModal">
+                        Load Config
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="MudColor.Primary"
+                               StartIcon="@Icons.Material.Filled.Save"
+                               OnClick="SaveCurrentConfiguration"
+                               Disabled="@(!HasLoadedConfig)"
+                               Title="@(HasLoadedConfig ? "Save current configuration" : "No configuration loaded")">
+                        Save Config
                     </MudButton>
                     <MudButton Variant="Variant.Outlined"
                                Color="MudColor.Primary"
                                StartIcon="@Icons.Material.Filled.Upload"
-                               OnClick="TriggerFileUpload">
+                               OnClick="OpenUploadConfigModal">
                         Upload Config
                     </MudButton>
-                    <InputFile id="fileUpload" OnChange="UploadConfiguration" style="display: none;" accept=".json" />
+                    <MudButton Variant="Variant.Outlined"
+                               Color="MudColor.Primary"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               OnClick="DownloadConfiguration"
+                               Disabled="@(!HasLoadedConfig)">
+                        Download Config
+                    </MudButton>
                 </MudStack>
             </MudStack>
         </MudPaper>
@@ -145,45 +177,84 @@
 @code {
     private ModelInputs ModelInputs { get; set; } = new ModelInputs();
     private int OutputStationsCount { get; set; }
+    private Guid? currentConfigId;
+    private string currentConfigName = string.Empty;
+    private bool HasLoadedConfig => currentConfigId.HasValue && !string.IsNullOrEmpty(currentConfigName);
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadConfigurationData();
+        await LoadActiveConfiguration();
     }
 
-    private async Task LoadConfigurationData()
+    private async Task LoadActiveConfiguration()
     {
         try
         {
-            var config = await ConfigService.LoadConfigurationAsync();
-            ModelInputs = config ?? ConfigService.CreateDefaultConfiguration();
+            // Try to load active configuration from database
+            var config = await ConfigService.LoadActiveConfigurationAsync();
 
-            OutputStationsCount = ModelInputs.StationDeclarations?
-                .Count(s => s.DemandForecast != null || s.DemandVariability.HasValue) ?? 0;
+            if (config != null)
+            {
+                ModelInputs = config;
 
-            StateHasChanged(); // Refresh the UI
+                // Get the active configuration details
+                var configs = await ConfigService.GetAllConfigurationsAsync();
+                var activeConfig = configs.FirstOrDefault(c => c.IsActive);
+
+                if (activeConfig != null)
+                {
+                    currentConfigId = activeConfig.Id;
+                    currentConfigName = activeConfig.Name;
+
+                    // Update state service so other pages can access this configuration
+                    StateService.SetConfiguration(currentConfigId, currentConfigName, ModelInputs);
+                }
+            }
+            else
+            {
+                // No active configuration - create default
+                ModelInputs = ConfigService.CreateDefaultConfiguration();
+                currentConfigId = null;
+                currentConfigName = string.Empty;
+
+                // Clear state service
+                StateService.ClearConfiguration();
+            }
+
+            UpdateOutputStationsCount();
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading configuration");
+            Logger.LogError(ex, "Error loading active configuration");
             ModelInputs = ConfigService.CreateDefaultConfiguration();
-            OutputStationsCount = 0;
+            currentConfigId = null;
+            currentConfigName = string.Empty;
+            UpdateOutputStationsCount();
+
+            // Clear state service
+            StateService.ClearConfiguration();
         }
+    }
+
+    private void UpdateOutputStationsCount()
+    {
+        OutputStationsCount = ModelInputs.StationDeclarations?
+            .Count(s => s.NextStationsInput == null || !s.NextStationsInput.Any()) ?? 0;
     }
 
     private async Task DownloadConfiguration()
     {
+        if (!HasLoadedConfig)
+        {
+            Snackbar.Add("No configuration loaded to download", Severity.Warning);
+            return;
+        }
+
         try
         {
-            var config = await ConfigService.LoadConfigurationAsync();
-            if (config == null)
-            {
-                Snackbar.Add("No configuration available to download", Severity.Warning);
-                return;
-            }
-
-            var jsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(config, Newtonsoft.Json.Formatting.Indented);
-            var fileName = $"SmartPPC_Config_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json";
+            var jsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(ModelInputs, Newtonsoft.Json.Formatting.Indented);
+            var fileName = $"{currentConfigName}_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json";
 
             // Use JavaScript interop to trigger download
             await JSRuntime.InvokeVoidAsync("downloadFile", fileName, jsonContent);
@@ -196,73 +267,155 @@
         }
     }
 
-    private async Task TriggerFileUpload()
+    private async Task OpenLoadConfigModal()
     {
-        // Trigger the hidden file input
-        await JSRuntime.InvokeVoidAsync("document.getElementById('fileUpload').click");
+        var dialog = await DialogService.ShowAsync<LoadConfigModal>("Load Configuration", new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        });
+
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is LoadConfigModal.LoadConfigResult loadResult)
+        {
+            if (loadResult.IsNewConfig)
+            {
+                // Create new configuration with the provided name
+                currentConfigName = loadResult.ConfigName;
+                ModelInputs = ConfigService.CreateDefaultConfiguration();
+                UpdateOutputStationsCount();
+
+                try
+                {
+                    // Save the new configuration to database immediately
+                    currentConfigId = await ConfigService.SaveConfigurationToDatabaseAsync(
+                        currentConfigName,
+                        ModelInputs,
+                        setAsActive: true);
+
+                    // Update state service with the new configuration
+                    StateService.SetConfiguration(currentConfigId, currentConfigName, ModelInputs);
+
+                    Snackbar.Add($"New configuration '{currentConfigName}' created successfully!", Severity.Success);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error creating new configuration");
+                    Snackbar.Add($"Error creating configuration: {ex.Message}", Severity.Error);
+                    currentConfigId = null;
+                    currentConfigName = string.Empty;
+                    StateService.ClearConfiguration();
+                }
+            }
+            else if (loadResult.ConfigId.HasValue)
+            {
+                // Load existing configuration
+                try
+                {
+                    var config = await ConfigService.LoadConfigurationFromDatabaseAsync(loadResult.ConfigId.Value);
+                    if (config != null)
+                    {
+                        ModelInputs = config;
+                        currentConfigId = loadResult.ConfigId;
+                        currentConfigName = loadResult.ConfigName;
+
+                        // Set as active
+                        await ConfigService.SetActiveConfigurationAsync(loadResult.ConfigId.Value);
+
+                        UpdateOutputStationsCount();
+
+                        // Update state service with loaded configuration
+                        StateService.SetConfiguration(currentConfigId, currentConfigName, ModelInputs);
+
+                        Snackbar.Add($"Configuration '{currentConfigName}' loaded successfully!", Severity.Success);
+                    }
+                    else
+                    {
+                        Snackbar.Add("Failed to load configuration", Severity.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error loading configuration");
+                    Snackbar.Add($"Error loading configuration: {ex.Message}", Severity.Error);
+                }
+            }
+
+            StateHasChanged();
+        }
     }
 
-    private async Task UploadConfiguration(InputFileChangeEventArgs e)
+    private async Task OpenUploadConfigModal()
     {
+        var dialog = await DialogService.ShowAsync<UploadConfigModal>("Upload Configuration", new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        });
+
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is UploadConfigModal.UploadConfigResult uploadResult)
+        {
+            if (uploadResult.AppliedToContext && uploadResult.Config != null)
+            {
+                // Apply the uploaded configuration to the current context
+                ModelInputs = uploadResult.Config;
+                currentConfigId = uploadResult.ConfigId;
+                currentConfigName = uploadResult.ConfigName;
+                UpdateOutputStationsCount();
+
+                // Update state service with uploaded configuration
+                StateService.SetConfiguration(currentConfigId, currentConfigName, ModelInputs);
+
+                Snackbar.Add($"Configuration '{currentConfigName}' uploaded and applied successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Configuration '{uploadResult.ConfigName}' uploaded successfully (not applied to current context)", Severity.Success);
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveCurrentConfiguration()
+    {
+        if (!HasLoadedConfig)
+        {
+            Snackbar.Add("No configuration loaded. Please load or create a configuration first.", Severity.Warning);
+            return;
+        }
+
         try
         {
-            var file = e.File;
-            if (file == null)
+            if (currentConfigId.HasValue)
             {
-                Snackbar.Add("No file selected", Severity.Warning);
-                return;
-            }
+                // Update existing configuration
+                await ConfigService.UpdateConfigurationInDatabaseAsync(currentConfigId.Value, ModelInputs, setAsActive: true);
 
-            // Validate file extension
-            if (!file.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                // Update state service
+                StateService.SetConfiguration(currentConfigId, currentConfigName, ModelInputs);
+
+                Snackbar.Add($"Configuration '{currentConfigName}' saved successfully!", Severity.Success);
+            }
+            else
             {
-                Snackbar.Add("Please upload a JSON file", Severity.Error);
-                return;
+                // Create new configuration
+                var configId = await ConfigService.SaveConfigurationToDatabaseAsync(currentConfigName, ModelInputs, setAsActive: true);
+                currentConfigId = configId;
+
+                // Update state service with new config ID
+                StateService.SetConfiguration(currentConfigId, currentConfigName, ModelInputs);
+
+                Snackbar.Add($"Configuration '{currentConfigName}' created and saved successfully!", Severity.Success);
             }
-
-            // Read file content
-            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB max
-            using var reader = new StreamReader(stream);
-            var jsonContent = await reader.ReadToEndAsync();
-
-            // Deserialize to ModelInputs
-            ModelInputs? uploadedConfig;
-            try
-            {
-                uploadedConfig = Newtonsoft.Json.JsonConvert.DeserializeObject<ModelInputs>(jsonContent);
-            }
-            catch (Exception ex)
-            {
-                Snackbar.Add($"Invalid JSON format: {ex.Message}", Severity.Error);
-                return;
-            }
-
-            if (uploadedConfig == null)
-            {
-                Snackbar.Add("Failed to parse configuration file", Severity.Error);
-                return;
-            }
-
-            // Validate configuration with business rules
-            var validationResult = await ConfigService.ValidateConfigurationWithBusinessRules(uploadedConfig);
-            if (!validationResult.IsSuccess)
-            {
-                var errorMessage = string.Join("\n", validationResult.Errors);
-                Snackbar.Add($"Configuration validation failed:\n{errorMessage}", Severity.Error);
-                return;
-            }
-
-            // Save configuration
-            await ConfigService.SaveConfigurationAsync(uploadedConfig);
-            Snackbar.Add("Configuration uploaded and saved successfully!", Severity.Success);
-
-            // Reload the configuration data to update the UI
-            await LoadConfigurationData();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error uploading configuration");
-            Snackbar.Add($"Error uploading configuration: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Error saving configuration");
+            Snackbar.Add($"Error saving configuration: {ex.Message}", Severity.Error);
         }
     }
 }

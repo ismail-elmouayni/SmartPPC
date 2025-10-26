@@ -1,6 +1,7 @@
 @using SmartPPC.Core.Model.DDMRP
 @using SmartPPC.Api.Services
 @inject ConfigurationService ConfigService
+@inject ConfigurationStateService StateService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
@@ -169,6 +170,13 @@
     {
         try
         {
+            // Check if a configuration is loaded
+            if (!StateService.HasConfiguration)
+            {
+                Snackbar.Add("No configuration loaded. Please load or create a configuration from the Dashboard first.", Severity.Warning);
+                return;
+            }
+
             if (selectedStation != null && selectedStationIndex.HasValue && ModelInputs.StationDeclarations != null)
             {
                 // Create updated station with new forecast
@@ -192,9 +200,26 @@
                     ModelInputs.StationDeclarations[index] = updatedStation;
                 }
 
+                // Validate configuration
                 ConfigService.ValidateConfiguration(ModelInputs);
-                await ConfigService.SaveConfigurationAsync(ModelInputs);
-                Snackbar.Add($"Forecast for Station {selectedStationIndex} saved successfully!", Severity.Success);
+
+                // Save to database
+                if (StateService.CurrentConfigId.HasValue)
+                {
+                    await ConfigService.UpdateConfigurationInDatabaseAsync(
+                        StateService.CurrentConfigId.Value,
+                        ModelInputs,
+                        setAsActive: true);
+
+                    // Update state service with the saved configuration
+                    StateService.UpdateConfiguration(ModelInputs);
+
+                    Snackbar.Add($"Forecast for Station {selectedStationIndex} saved successfully!", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Configuration ID not found. Please reload the configuration from the Dashboard.", Severity.Error);
+                }
             }
         }
         catch (Exception ex)

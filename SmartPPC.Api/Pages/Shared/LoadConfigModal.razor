@@ -1,0 +1,219 @@
+@using SmartPPC.Api.Services
+@using MudBlazor
+@inject ConfigurationService ConfigService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Load Configuration</MudText>
+
+        @if (isLoading)
+        {
+            <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Style="min-height: 200px;">
+                <MudProgressCircular Color="MudColor.Primary" Indeterminate="true" />
+                <MudText>Loading configurations...</MudText>
+            </MudStack>
+        }
+        else if (!configurations.Any() && !showNewConfigInput)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                No saved configurations found. Create your first configuration below.
+            </MudAlert>
+            <MudButton Variant="Variant.Outlined"
+                       Color="MudColor.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="ShowNewConfigInput"
+                       FullWidth="true">
+                Create New Configuration
+            </MudButton>
+        }
+        else
+        {
+            @if (configurations.Any())
+            {
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Select an existing configuration:</MudText>
+                <MudTable T="ConfigurationDto"
+                          Items="@configurations"
+                          Hover="true"
+                          Dense="true"
+                          Bordered="true"
+                          @bind-SelectedItem="selectedConfig"
+                          SelectOnRowClick="true"
+                          Class="mb-4">
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Created</MudTh>
+                        <MudTh>Last Updated</MudTh>
+                        <MudTh>Status</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Name">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                @if (context.IsActive)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="MudColor.Success" Size="MudBlazor.Size.Small" />
+                                }
+                                <MudText>@context.Name</MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Created">@context.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+                        <MudTd DataLabel="Last Updated">@context.UpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+                        <MudTd DataLabel="Status">
+                            @if (context.IsActive)
+                            {
+                                <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudColor.Success">Active</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudColor.Default">Inactive</MudChip>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+
+            @if (!showNewConfigInput)
+            {
+                <MudDivider Class="my-4" />
+                <MudButton Variant="Variant.Outlined"
+                           Color="MudColor.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="ShowNewConfigInput"
+                           FullWidth="true">
+                    Create New Configuration
+                </MudButton>
+            }
+            else
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Create a new configuration:</MudText>
+                <MudTextField @bind-Value="newConfigName"
+                              Label="Configuration Name"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              RequiredError="Configuration name is required"
+                              Immediate="true"
+                              FullWidth="true"
+                              Class="mb-2" />
+                <MudButton Variant="Variant.Text"
+                           Color="MudColor.Default"
+                           OnClick="HideNewConfigInput"
+                           Size="MudBlazor.Size.Small">
+                    Cancel New
+                </MudButton>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="MudColor.Default">Cancel</MudButton>
+        <MudButton OnClick="LoadConfiguration"
+                   Color="MudColor.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!CanLoad)">
+            @if (showNewConfigInput)
+            {
+                <span>Create</span>
+            }
+            else
+            {
+                <span>Load</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance? MudDialog { get; set; }
+
+    private List<ConfigurationDto> configurations = new();
+    private ConfigurationDto? selectedConfig;
+    private bool isLoading = true;
+    private bool showNewConfigInput = false;
+    private string newConfigName = string.Empty;
+
+    private bool CanLoad =>
+        (showNewConfigInput && !string.IsNullOrWhiteSpace(newConfigName)) ||
+        (!showNewConfigInput && selectedConfig != null);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConfigurations();
+    }
+
+    private async Task LoadConfigurations()
+    {
+        isLoading = true;
+        try
+        {
+            configurations = await ConfigService.GetAllConfigurationsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading configurations: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowNewConfigInput()
+    {
+        showNewConfigInput = true;
+        selectedConfig = null;
+    }
+
+    private void HideNewConfigInput()
+    {
+        showNewConfigInput = false;
+        newConfigName = string.Empty;
+    }
+
+    private async Task LoadConfiguration()
+    {
+        if (showNewConfigInput)
+        {
+            // Create new configuration
+            if (string.IsNullOrWhiteSpace(newConfigName))
+            {
+                Snackbar.Add("Please enter a configuration name", Severity.Warning);
+                return;
+            }
+
+            MudDialog?.Close(DialogResult.Ok(new LoadConfigResult
+            {
+                IsNewConfig = true,
+                ConfigName = newConfigName.Trim()
+            }));
+        }
+        else
+        {
+            // Load existing configuration
+            if (selectedConfig == null)
+            {
+                Snackbar.Add("Please select a configuration", Severity.Warning);
+                return;
+            }
+
+            MudDialog?.Close(DialogResult.Ok(new LoadConfigResult
+            {
+                IsNewConfig = false,
+                ConfigId = selectedConfig.Id,
+                ConfigName = selectedConfig.Name
+            }));
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    public class LoadConfigResult
+    {
+        public bool IsNewConfig { get; set; }
+        public Guid? ConfigId { get; set; }
+        public string ConfigName { get; set; } = string.Empty;
+    }
+}

@@ -5,9 +5,23 @@
 @using SmartPPC.Api.Services
 @using SmartPPC.Core.Model.DDMRP
 @inject ConfigurationService ConfigService
+@inject ConfigurationStateService StateService
 @inject ILogger<DemandForecast> Logger
 
 <h1>Demand Forecast</h1>
+
+@if (!StateService.HasConfiguration)
+{
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        <MudText Typo="Typo.body1">
+            <strong>No configuration is currently loaded.</strong>
+        </MudText>
+        <MudText Typo="Typo.body2" Class="mt-2">
+            Please load or create a configuration from the <MudLink Href="/">Dashboard</MudLink> before setting demand forecasts.
+            You can view the default settings below, but changes will not be saved until a configuration is loaded.
+        </MudText>
+    </MudAlert>
+}
 
 @if (ErrorMessage != null)
 {
@@ -30,8 +44,16 @@
     {
         try
         {
-            var config = await ConfigService.LoadConfigurationAsync();
-            ModelInputs = config ?? ConfigService.CreateDefaultConfiguration();
+            // Get configuration from state service
+            if (StateService.HasConfiguration && StateService.CurrentConfiguration != null)
+            {
+                ModelInputs = StateService.CurrentConfiguration;
+            }
+            else
+            {
+                // No configuration loaded - show default values but warn user
+                ModelInputs = ConfigService.CreateDefaultConfiguration();
+            }
         }
         catch (Exception ex)
         {

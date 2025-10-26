@@ -107,6 +107,9 @@ public class Program
         // Register Configuration Service
         builder.Services.AddScoped<SmartPPC.Api.Services.ConfigurationService>();
 
+        // Register Configuration State Service (for sharing state across pages)
+        builder.Services.AddScoped<SmartPPC.Api.Services.ConfigurationStateService>();
+
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();

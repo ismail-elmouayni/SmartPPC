@@ -7,6 +7,7 @@
 @using FluentResults
 @using Newtonsoft.Json
 @inject ConfigurationService ConfigService
+@inject ConfigurationStateService StateService
 @inject ILogger<SolverPage> Logger
 @inject IJSRuntime JSRuntime
 
@@ -307,9 +308,19 @@
     {
         try
         {
-            var config = await ConfigService.LoadConfigurationAsync();
-            ModelInputs = config ?? ConfigService.CreateDefaultConfiguration();
-            HasConfiguration = ModelInputs.NumberOfStations > 0 && ModelInputs.PlanningHorizon > 0;
+            // Get configuration from state service
+            if (StateService.HasConfiguration && StateService.CurrentConfiguration != null)
+            {
+                ModelInputs = StateService.CurrentConfiguration;
+            }
+            else
+            {
+                // No configuration loaded - use default
+                ModelInputs = ConfigService.CreateDefaultConfiguration();
+            }
+
+            // Use state service to determine if configuration is loaded
+            HasConfiguration = StateService.HasConfiguration;
             OutputStationsCount = ModelInputs.StationDeclarations?
                 .Count(s => s.DemandForecast != null && s.DemandForecast.Any()) ?? 0;
         }
@@ -353,15 +364,31 @@
             errorMessage = null;
             StateHasChanged();
 
-            // Load current configuration
-            ModelInputs = await ConfigService.LoadConfigurationAsync() ?? ConfigService.CreateDefaultConfiguration();
-            HasConfiguration = ModelInputs.NumberOfStations > 0 && ModelInputs.PlanningHorizon > 0;
+            // Get current configuration from state service
+            if (StateService.HasConfiguration && StateService.CurrentConfiguration != null)
+            {
+                ModelInputs = StateService.CurrentConfiguration;
+            }
+            else
+            {
+                ModelInputs = ConfigService.CreateDefaultConfiguration();
+            }
+
+            // Use state service to determine if configuration is loaded
+            HasConfiguration = StateService.HasConfiguration;
             OutputStationsCount = ModelInputs.StationDeclarations?
                 .Count(s => s.DemandForecast != null && s.DemandForecast.Any()) ?? 0;
 
             if (!HasConfiguration)
             {
-                errorMessage = "No valid configuration found. Please configure the system first.";
+                errorMessage = "No configuration loaded. Please load or create a configuration from the Dashboard first.";
+                return;
+            }
+
+            // Validate that configuration has the necessary data to run the solver
+            if (ModelInputs.NumberOfStations <= 0 || ModelInputs.PlanningHorizon <= 0)
+            {
+                errorMessage = "Configuration is incomplete. Please ensure you have configured stations and planning horizons before running the solver.";
                 return;
             }
 

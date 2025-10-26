@@ -1,6 +1,7 @@
 @using SmartPPC.Core.Model.DDMRP
 @using SmartPPC.Api.Services
 @inject ConfigurationService ConfigService
+@inject ConfigurationStateService StateService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
@@ -74,15 +75,38 @@
         {
             await form.Validate();
 
-            if (success)
+            if (!success)
             {
-                ConfigService.ValidateConfiguration(ModelInputs);
-                await ConfigService.SaveConfigurationAsync(ModelInputs);
+                Snackbar.Add("Please correct the validation errors", Severity.Error);
+                return;
+            }
+
+            // Check if a configuration is loaded
+            if (!StateService.HasConfiguration)
+            {
+                Snackbar.Add("No configuration loaded. Please load or create a configuration from the Dashboard first.", Severity.Warning);
+                return;
+            }
+
+            // Validate configuration
+            ConfigService.ValidateConfiguration(ModelInputs);
+
+            // Save to database
+            if (StateService.CurrentConfigId.HasValue)
+            {
+                await ConfigService.UpdateConfigurationInDatabaseAsync(
+                    StateService.CurrentConfigId.Value,
+                    ModelInputs,
+                    setAsActive: true);
+
+                // Update state service with the saved configuration
+                StateService.UpdateConfiguration(ModelInputs);
+
                 Snackbar.Add("Configuration saved successfully!", Severity.Success);
             }
             else
             {
-                Snackbar.Add("Please correct the validation errors", Severity.Error);
+                Snackbar.Add("Configuration ID not found. Please reload the configuration from the Dashboard.", Severity.Error);
             }
         }
         catch (Exception ex)

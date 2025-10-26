@@ -1,0 +1,238 @@
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.Model.DDMRP
+@using Microsoft.AspNetCore.Components.Forms
+@using MudBlazor
+@inject ConfigurationService ConfigService
+@inject ISnackbar Snackbar
+@inject ILogger<UploadConfigModal> Logger
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Upload Configuration</MudText>
+
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.subtitle2">Select a configuration file (JSON):</MudText>
+
+            <InputFile id="uploadFileInput"
+                       OnChange="OnFileSelected"
+                       accept=".json"
+                       style="display: none;" />
+
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudButton Variant="Variant.Outlined"
+                           Color="MudColor.Primary"
+                           StartIcon="@Icons.Material.Filled.Upload"
+                           OnClick="TriggerFileInput">
+                    Choose File
+                </MudButton>
+                @if (!string.IsNullOrEmpty(selectedFileName))
+                {
+                    <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudColor.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="MudBlazor.Size.Small" Class="mr-1" />
+                        @selectedFileName
+                    </MudChip>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="MudColor.Secondary">No file selected</MudText>
+                }
+            </MudStack>
+
+            @if (validationErrors.Any())
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2">
+                    <MudText Typo="Typo.subtitle2">Validation Errors:</MudText>
+                    <MudList T="string" Dense="true">
+                        @foreach (var error in validationErrors)
+                        {
+                            <MudListItem T="string">
+                                <MudText Typo="Typo.body2">• @error</MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudAlert>
+            }
+
+            <MudDivider />
+
+            <MudTextField @bind-Value="configName"
+                          Label="Configuration Name"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="Configuration name is required"
+                          Immediate="true"
+                          HelperText="Enter a unique name for this configuration"
+                          FullWidth="true" />
+
+            <MudCheckBox @bind-Value="applyToContext"
+                         Color="MudColor.Primary"
+                         Label="Apply this configuration to the current context"
+                         Dense="true" />
+
+            <MudText Typo="Typo.caption" Color="MudColor.Secondary">
+                @if (applyToContext)
+                {
+                    <span>The configuration will be saved to the database and immediately loaded as the active configuration.</span>
+                }
+                else
+                {
+                    <span>The configuration will be saved to the database but not loaded.</span>
+                }
+            </MudText>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="MudColor.Default">Cancel</MudButton>
+        <MudButton OnClick="UploadAndSave"
+                   Color="MudColor.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!CanSave)"
+                   StartIcon="@Icons.Material.Filled.Save">
+            Save Configuration
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance? MudDialog { get; set; }
+
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = null!;
+
+    private string selectedFileName = string.Empty;
+    private ModelInputs? uploadedConfig;
+    private string configName = string.Empty;
+    private bool applyToContext = true;
+    private List<string> validationErrors = new();
+
+    private bool CanSave =>
+        uploadedConfig != null &&
+        !string.IsNullOrWhiteSpace(configName) &&
+        !validationErrors.Any();
+
+    private async Task TriggerFileInput()
+    {
+        await JSRuntime.InvokeVoidAsync("document.getElementById('uploadFileInput').click");
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        validationErrors.Clear();
+        selectedFileName = string.Empty;
+        uploadedConfig = null;
+
+        try
+        {
+            var file = e.File;
+            if (file == null)
+            {
+                validationErrors.Add("No file selected");
+                return;
+            }
+
+            // Validate file extension
+            if (!file.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                validationErrors.Add("Please upload a JSON file (.json)");
+                return;
+            }
+
+            selectedFileName = file.Name;
+
+            // Read file content
+            using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB max
+            using var reader = new StreamReader(stream);
+            var jsonContent = await reader.ReadToEndAsync();
+
+            // Deserialize to ModelInputs
+            try
+            {
+                uploadedConfig = Newtonsoft.Json.JsonConvert.DeserializeObject<ModelInputs>(jsonContent);
+            }
+            catch (Exception ex)
+            {
+                validationErrors.Add($"Invalid JSON format: {ex.Message}");
+                selectedFileName = string.Empty;
+                return;
+            }
+
+            if (uploadedConfig == null)
+            {
+                validationErrors.Add("Failed to parse configuration file");
+                selectedFileName = string.Empty;
+                return;
+            }
+
+            // Validate configuration with business rules
+            var validationResult = await ConfigService.ValidateConfigurationWithBusinessRules(uploadedConfig);
+            if (!validationResult.IsSuccess)
+            {
+                validationErrors.AddRange(validationResult.Errors);
+                uploadedConfig = null;
+                selectedFileName = string.Empty;
+                return;
+            }
+
+            // Success - suggest a config name based on filename if not already set
+            if (string.IsNullOrWhiteSpace(configName))
+            {
+                configName = Path.GetFileNameWithoutExtension(file.Name);
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error reading uploaded file");
+            validationErrors.Add($"Error reading file: {ex.Message}");
+            selectedFileName = string.Empty;
+            uploadedConfig = null;
+        }
+    }
+
+    private async Task UploadAndSave()
+    {
+        if (!CanSave)
+        {
+            Snackbar.Add("Please select a valid configuration file and enter a name", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var configId = await ConfigService.SaveConfigurationToDatabaseAsync(
+                configName.Trim(),
+                uploadedConfig!,
+                setAsActive: applyToContext);
+
+            Snackbar.Add($"Configuration '{configName}' saved successfully!", Severity.Success);
+
+            MudDialog?.Close(DialogResult.Ok(new UploadConfigResult
+            {
+                ConfigId = configId,
+                ConfigName = configName.Trim(),
+                AppliedToContext = applyToContext,
+                Config = uploadedConfig
+            }));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving uploaded configuration");
+            Snackbar.Add($"Error saving configuration: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    public class UploadConfigResult
+    {
+        public Guid ConfigId { get; set; }
+        public string ConfigName { get; set; } = string.Empty;
+        public bool AppliedToContext { get; set; }
+        public ModelInputs? Config { get; set; }
+    }
+}
