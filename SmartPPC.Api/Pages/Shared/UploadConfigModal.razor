@@ -113,7 +113,7 @@
 
     private async Task TriggerFileInput()
     {
-        await JSRuntime.InvokeVoidAsync("document.getElementById('uploadFileInput').click");
+        await JSRuntime.InvokeVoidAsync("triggerFileInput", "uploadFileInput");
     }
 
     private async Task OnFileSelected(InputFileChangeEventArgs e)
