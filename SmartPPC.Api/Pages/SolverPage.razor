@@ -241,6 +241,12 @@
                                        EndIcon="@(showOrderTable ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
                                 @(showOrderTable ? "Hide" : "Show") Order Table
                             </MudButton>
+                            <MudButton OnClick="ToggleBufferTable"
+                                       Variant="Variant.Outlined"
+                                       Color="MudColor.Primary"
+                                       EndIcon="@(showBufferTable ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
+                                @(showBufferTable ? "Hide" : "Show") Buffer Table
+                            </MudButton>
                         </MudStack>
 
                         @if (showDemandTable && Result?.Solution?.Stations != null)
@@ -333,6 +339,75 @@
                                 </tbody>
                             </MudSimpleTable>
                         }
+
+                        @if (showBufferTable && Result?.Solution?.Stations != null)
+                        {
+                            var bufferedStations = GetStationsWithBuffers();
+
+                            @if (!bufferedStations.Any())
+                            {
+                                <MudDivider Class="my-4" />
+                                <MudAlert Severity="Severity.Info" Class="mt-4">
+                                    No stations with buffers found in the solution. The solver may have determined that buffers are not optimal for this configuration.
+                                </MudAlert>
+                            }
+                            else
+                            {
+                                <MudDivider Class="my-4" />
+                                <MudText Typo="Typo.h6" Class="mb-3">Buffer Levels by Station</MudText>
+                                <MudText Typo="Typo.body2" Color="MudColor.Secondary" Class="mb-3">
+                                    Buffer levels for stations where buffers are activated. Only stations with HasBuffer=true are shown.
+                                </MudText>
+
+                                <MudSelect T="int" Label="Select Station (Buffered Only)" Value="selectedStationIndex" ValueChanged="OnStationChanged" Class="mb-4" Variant="Variant.Outlined">
+                                    @foreach (var station in bufferedStations)
+                                    {
+                                        <MudSelectItem T="int" Value="@station.Index">Station @station.Index</MudSelectItem>
+                                    }
+                                </MudSelect>
+
+                                var selectedBufferedStation = bufferedStations.FirstOrDefault(s => s.Index == selectedStationIndex);
+
+                                @if (selectedBufferedStation != null)
+                                {
+                                    <MudSimpleTable Striped="true" Dense="true" Hover="true" Style="overflow-x: auto;">
+                                        <thead>
+                                            <tr>
+                                                <th>Period</th>
+                                                @foreach (var bufferPoint in GetBufferData())
+                                                {
+                                                    <th>@bufferPoint.Period</th>
+                                                }
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Buffer Level</strong></td>
+                                                @foreach (var bufferPoint in GetBufferData())
+                                                {
+                                                    <td>
+                                                        @if (bufferPoint.Buffer.HasValue)
+                                                        {
+                                                            @bufferPoint.Buffer.Value
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>-</span>
+                                                        }
+                                                    </td>
+                                                }
+                                            </tr>
+                                        </tbody>
+                                    </MudSimpleTable>
+                                }
+                                else
+                                {
+                                    <MudAlert Severity="Severity.Warning" Class="mt-4">
+                                        Selected station does not have a buffer. Please select a buffered station from the dropdown.
+                                    </MudAlert>
+                                }
+                            }
+                        }
                     }
                 </MudPaper>
             </MudItem>
@@ -353,6 +428,7 @@
     private bool showFitnessTable { get; set; } = false;
     private bool showDemandTable { get; set; } = false;
     private bool showOrderTable { get; set; } = false;
+    private bool showBufferTable { get; set; } = false;
     private int selectedStationIndex { get; set; } = 0;
     private ApexChart<FitnessPoint>? fitnessChart;
     private bool _previousDarkMode = false;
@@ -504,6 +580,11 @@
         showOrderTable = !showOrderTable;
     }
 
+    private void ToggleBufferTable()
+    {
+        showBufferTable = !showBufferTable;
+    }
+
     private void OnStationChanged(int newStationIndex)
     {
         selectedStationIndex = newStationIndex;
@@ -545,6 +626,35 @@
                 OrderAmount = state.OrderAmount
             })
             .OrderBy(o => o.Period)
+            .ToList();
+    }
+
+    private List<BufferPoint> GetBufferData()
+    {
+        if (Result?.Solution?.Stations == null || selectedStationIndex >= Result.Solution.Stations.Count)
+            return new List<BufferPoint>();
+
+        var station = Result.Solution.Stations[selectedStationIndex];
+        if (station.FutureStates == null || !station.FutureStates.Any())
+            return new List<BufferPoint>();
+
+        return station.FutureStates
+            .Select(state => new BufferPoint
+            {
+                Period = state.Instant,
+                Buffer = state.Buffer
+            })
+            .OrderBy(b => b.Period)
+            .ToList();
+    }
+
+    private List<StationModel> GetStationsWithBuffers()
+    {
+        if (Result?.Solution?.Stations == null)
+            return new List<StationModel>();
+
+        return Result.Solution.Stations
+            .Where(s => s.HasBuffer)
             .ToList();
     }
 
@@ -733,5 +843,11 @@
     {
         public int Period { get; set; }
         public int? OrderAmount { get; set; }
+    }
+
+    public class BufferPoint
+    {
+        public int Period { get; set; }
+        public int? Buffer { get; set; }
     }
 }
