@@ -3,9 +3,6 @@ using SmartPPC.Core.Model;
 using FluentResults;
 using GeneticSharp;
 using SmartPPC.Core.Model.DDMRP;
-using System.Globalization;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace SmartPPC.Core.Solver.GA;
 
@@ -34,12 +31,16 @@ public sealed class GnSolver : IProductionControlSolver
         {
             return Result.Fail(exResult.Errors);
         }
+        
+        return Initialize(exResult.Value);
+    }
 
-        _modelInputs = exResult.Value;
-
-        var adamChromosome = new Chromosome(_modelInputs.NumberOfStations);
+    public Result Initialize(ModelInputs modelInputs)
+    {
+        _modelInputs = modelInputs;
+        var adamChromosome = new Chromosome(modelInputs.NumberOfStations);
         var population = new Population(MinPopulationSize, MaxPopulationSize, adamChromosome);
-        var fitness = new Fitness(_modelInputs);
+        var fitness = new Fitness(modelInputs);
         var selection = new TournamentSelection();
         var crossover = new UniformCrossover();
         var mutation = new FlipBitMutation();
@@ -68,8 +69,13 @@ public sealed class GnSolver : IProductionControlSolver
             .Select(g => (int)g.Value)
             .ToArray();
 
-        IProductionControlModel controlModel = ModelBuilder.CreateFromInputs(_modelInputs)
-            .Value;
+        var modelCreationResult = ModelBuilder.CreateFromInputs(_modelInputs!);
+        if (modelCreationResult.IsFailed)
+        {
+            return Result.Fail<OptimizationResult>(modelCreationResult.Errors);
+        }
+
+        IProductionControlModel controlModel = modelCreationResult.Value;
         controlModel.PlanBasedOnBuffersPositions(buffersActivation);
 
         return Result.Ok(new OptimizationResult(

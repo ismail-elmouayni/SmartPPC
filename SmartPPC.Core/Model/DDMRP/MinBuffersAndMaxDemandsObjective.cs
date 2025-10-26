@@ -4,7 +4,7 @@ namespace SmartPPC.Core.Model.DDMRP;
 
 public class MinBuffersAndMaxDemandsObjective : IObjective
 {
-    public const int BigNumber = 1000000000;
+    public const int BigNumber = 1000;
     public float BuffersOptimizationWeight { get; set; } = 1f;
     public float DemandsOptimizationWeight { get; set; } = 100f;
     public float BufferActivationCost { get; set; } = 10f;

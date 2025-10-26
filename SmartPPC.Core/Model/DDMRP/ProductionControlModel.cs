@@ -79,6 +79,7 @@ public class ProductionControlModel : IProductionControlModel
         PlanningHorizon = planningHorizon;
         PeakHorizon = peakHorizon;
         PastHorizon = pastHorizon;
+        PeakThreshold = peakThreshold;
         StationPrecedences = stationPrecedences;
         StationInputPrecedences = stationInputPrecedences;
         StationInitialBuffer = stationInitialBuffer;
@@ -135,7 +136,7 @@ public class ProductionControlModel : IProductionControlModel
         Status = ControlModelStatus.Initialized;
     }
 
-    public void SetLeadTimeForStation(StationModel stationModel)
+    private void SetLeadTimeForStation(StationModel stationModel)
     {
         if (stationModel.IsInputStation)
         {
@@ -155,7 +156,7 @@ public class ProductionControlModel : IProductionControlModel
         stationModel.LeadTime = leadTime;
     }
 
-    public void SetLeadTimeFactorForStation(StationModel stationModel)
+    private void SetLeadTimeFactorForStation(StationModel stationModel)
     {
         if (stationModel.LeadTime == 0)
         {
@@ -169,7 +170,7 @@ public class ProductionControlModel : IProductionControlModel
         stationModel.LeadTimeFactor = leadTimeFactor;
     }
 
-    public void SetAverageDemandForStation(StationModel stationModel)
+    private void SetAverageDemandForStation(StationModel stationModel)
     {
         if (stationModel.IsOutputStation)
         {
@@ -190,7 +191,7 @@ public class ProductionControlModel : IProductionControlModel
     }
 
 
-    public void SetDemandVariabilityForStation(StationModel stationModel)
+    private void SetDemandVariabilityForStation(StationModel stationModel)
     {
         var variability = (Stations.Where(s => s.Index > stationModel.Index)
             .Sum(s => StationInputPrecedences[stationModel.Index][s.Index] * s.DemandVariability * s.AverageDemand)
@@ -199,7 +200,7 @@ public class ProductionControlModel : IProductionControlModel
         stationModel.DemandVariability = variability;
     }
 
-    public void SetStationDemandBasedOnOrders(StationModel stationModel, int t)
+    private void SetStationDemandBasedOnOrders(StationModel stationModel, int t)
     {
         if (stationModel.IsOutputStation)
         {
@@ -224,7 +225,7 @@ public class ProductionControlModel : IProductionControlModel
                 StationInputPrecedences[stationModel.Index][couple.Index] * (couple.OrderAmount ?? couple.Demand));
     }
 
-    public void SetStationQualifiedDemand(StationModel stationModel, int t)
+    private void SetStationQualifiedDemand(StationModel stationModel, int t)
     {
         int? peakDemand = null;
         for (var i = t; i < t + PeakHorizon && i < PlanningHorizon; i++)
@@ -246,7 +247,7 @@ public class ProductionControlModel : IProductionControlModel
         }
     }
 
-    public void SetInitialBufferAndOrdersAmount()
+    private void SetInitialBufferAndOrdersAmount()
     {
         foreach (var station in Stations.OrderByDescending(s => s.Index))
         {
@@ -283,7 +284,7 @@ public class ProductionControlModel : IProductionControlModel
     }
 
 
-    public void ComputeBuffersOrdersAndReplenishment(int t)
+    private void ComputeBuffersOrdersAndReplenishment(int t)
     {
         foreach (var station in Stations.OrderByDescending(s => s.Index))
         {
@@ -336,7 +337,7 @@ public class ProductionControlModel : IProductionControlModel
         }
     }
 
-    public int GetIncomingSupply(StationModel stationModel, int t)
+    private int GetIncomingSupply(StationModel stationModel, int t)
     {
         if (stationModel.IsInputStation)
         {

@@ -365,16 +365,12 @@
                 return;
             }
 
-            // Save the ModelInputs to a temporary JSON file
-            var tempFilePath = Path.GetTempFileName();
-            await System.IO.File.WriteAllTextAsync(tempFilePath, JsonConvert.SerializeObject(ModelInputs));
-
             Logger.LogInformation("Starting solver with configuration: {Stations} stations, {Horizon} planning horizon",
                 ModelInputs.NumberOfStations, ModelInputs.PlanningHorizon);
 
             // Execute the solver
             var solver = new GnSolver();
-            solver.Initialize(tempFilePath);
+            solver.Initialize(ModelInputs);
             var result = solver.Resolve();
 
             if (result.IsSuccess)
@@ -389,12 +385,6 @@
                 Logger.LogError("Solver failed: {Errors}", string.Join(", ", result.Errors));
                 errorMessage = "An error occurred while solving the problem: " +
                     string.Join(", ", result.Errors.Select(e => e.Message));
-            }
-
-            // Clean up temp file
-            if (System.IO.File.Exists(tempFilePath))
-            {
-                System.IO.File.Delete(tempFilePath);
             }
         }
         catch (Exception ex)
