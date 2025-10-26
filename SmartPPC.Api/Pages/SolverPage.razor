@@ -228,12 +228,18 @@
 
                         <MudDivider Class="my-4" />
 
-                        <MudStack Row="true" Justify="Justify.Center" Class="mt-4">
+                        <MudStack Row="true" Justify="Justify.Center" Class="mt-4" Spacing="2">
                             <MudButton OnClick="ToggleDemandTable"
                                        Variant="Variant.Outlined"
                                        Color="MudColor.Primary"
                                        EndIcon="@(showDemandTable ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
                                 @(showDemandTable ? "Hide" : "Show") Demand Table
+                            </MudButton>
+                            <MudButton OnClick="ToggleOrderTable"
+                                       Variant="Variant.Outlined"
+                                       Color="MudColor.Primary"
+                                       EndIcon="@(showOrderTable ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
+                                @(showOrderTable ? "Hide" : "Show") Order Table
                             </MudButton>
                         </MudStack>
 
@@ -280,6 +286,53 @@
                                 </tbody>
                             </MudSimpleTable>
                         }
+
+                        @if (showOrderTable && Result?.Solution?.Stations != null)
+                        {
+                            <MudDivider Class="my-4" />
+                            <MudText Typo="Typo.h6" Class="mb-3">Replenishment Orders by Station</MudText>
+                            <MudText Typo="Typo.body2" Color="MudColor.Secondary" Class="mb-3">
+                                Order amounts represent the replenishment orders triggered for each period.
+                            </MudText>
+
+                            <MudSelect T="int" Label="Select Station" Value="selectedStationIndex" ValueChanged="OnStationChanged" Class="mb-4" Variant="Variant.Outlined">
+                                @for (int i = 0; i < Result.Solution.Stations.Count; i++)
+                                {
+                                    var stationIndex = i;
+                                    <MudSelectItem T="int" Value="@stationIndex">Station @stationIndex</MudSelectItem>
+                                }
+                            </MudSelect>
+
+                            <MudSimpleTable Striped="true" Dense="true" Hover="true" Style="overflow-x: auto;">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        @foreach (var orderPoint in GetOrderData())
+                                        {
+                                            <th>@orderPoint.Period</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Order Amount</strong></td>
+                                        @foreach (var orderPoint in GetOrderData())
+                                        {
+                                            <td>
+                                                @if (orderPoint.OrderAmount.HasValue)
+                                                {
+                                                    @orderPoint.OrderAmount.Value
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                </tbody>
+                            </MudSimpleTable>
+                        }
                     }
                 </MudPaper>
             </MudItem>
@@ -299,6 +352,7 @@
     private string? errorMessage { get; set; }
     private bool showFitnessTable { get; set; } = false;
     private bool showDemandTable { get; set; } = false;
+    private bool showOrderTable { get; set; } = false;
     private int selectedStationIndex { get; set; } = 0;
     private ApexChart<FitnessPoint>? fitnessChart;
     private bool _previousDarkMode = false;
@@ -445,6 +499,11 @@
         showDemandTable = !showDemandTable;
     }
 
+    private void ToggleOrderTable()
+    {
+        showOrderTable = !showOrderTable;
+    }
+
     private void OnStationChanged(int newStationIndex)
     {
         selectedStationIndex = newStationIndex;
@@ -467,6 +526,25 @@
                 Demand = state.Demand
             })
             .OrderBy(d => d.Period)
+            .ToList();
+    }
+
+    private List<OrderPoint> GetOrderData()
+    {
+        if (Result?.Solution?.Stations == null || selectedStationIndex >= Result.Solution.Stations.Count)
+            return new List<OrderPoint>();
+
+        var station = Result.Solution.Stations[selectedStationIndex];
+        if (station.FutureStates == null || !station.FutureStates.Any())
+            return new List<OrderPoint>();
+
+        return station.FutureStates
+            .Select(state => new OrderPoint
+            {
+                Period = state.Instant,
+                OrderAmount = state.OrderAmount
+            })
+            .OrderBy(o => o.Period)
             .ToList();
     }
 
@@ -649,5 +727,11 @@
     {
         public int Period { get; set; }
         public int? Demand { get; set; }
+    }
+
+    public class OrderPoint
+    {
+        public int Period { get; set; }
+        public int? OrderAmount { get; set; }
     }
 }
