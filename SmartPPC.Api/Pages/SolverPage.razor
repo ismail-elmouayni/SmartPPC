@@ -364,6 +364,12 @@
             errorMessage = null;
             StateHasChanged();
 
+            // Yield to allow UI to render the loading state
+            await Task.Yield();
+
+            // Force another render to ensure loading icon shows
+            StateHasChanged();
+
             // Get current configuration from state service
             if (StateService.HasConfiguration && StateService.CurrentConfiguration != null)
             {
@@ -395,10 +401,13 @@
             Logger.LogInformation("Starting solver with configuration: {Stations} stations, {Horizon} planning horizon",
                 ModelInputs.NumberOfStations, ModelInputs.PlanningHorizon);
 
-            // Execute the solver
-            var solver = new GnSolver();
-            solver.Initialize(ModelInputs);
-            var result = solver.Resolve();
+            // Execute the solver on a background thread to keep UI responsive
+            var result = await Task.Run(() =>
+            {
+                var solver = new GnSolver();
+                solver.Initialize(ModelInputs);
+                return solver.Resolve();
+            });
 
             if (result.IsSuccess)
             {
