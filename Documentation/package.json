@@ -1,0 +1,15 @@
+{
+  "name": "documentation",
+  "version": "1.0.0",
+  "description": "Welcome to the SmartPPC technical documentation. This directory contains comprehensive documentation for developers working on the SmartPPC application.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.12.0"
+  }
+}
