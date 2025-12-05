@@ -15,12 +15,8 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
 
-        // Add Database Context
-        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-
-        builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString));
+        // Add Database Context - using Aspire-provided PostgreSQL connection
+        builder.AddNpgsqlDbContext<ApplicationDbContext>("smartppc");
 
         // Add ASP.NET Core Identity
         builder.Services.AddIdentity<User, IdentityRole>(options =>
@@ -116,6 +112,13 @@ public class Program
 
 
         var app = builder.Build();
+
+        // Automatically apply database migrations on startup
+        using (var scope = app.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            dbContext.Database.Migrate();
+        }
 
         app.MapDefaultEndpoints();
 
