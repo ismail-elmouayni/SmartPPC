@@ -1,0 +1,167 @@
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.ML.Services
+@using SmartPPC.Core.ML.Domain
+@inject ConfigurationStateService StateService
+@inject IForecastingService ForecastingService
+@inject IForecastDataCollectionService DataCollectionService
+@inject ISnackbar Snackbar
+
+<PageTitle>ML Forecast Dashboard</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Dashboard" /> ML Forecasting Dashboard
+    </MudText>
+
+    @if (!StateService.HasConfiguration)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Please load a configuration first from the Dashboard.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="3">
+                    <MudCardContent>
+                        <div class="d-flex justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">Active Model</MudText>
+                                <MudText Typo="Typo.h6">@(_activeModel?.Name ?? "None")</MudText>
+                                @if (_activeModel != null)
+                                {
+                                    <MudText Typo="Typo.caption">MAE: @_activeModel.ValidationMAE?.ToString("F2")</MudText>
+                                }
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Psychology" Color="MudBlazor.Color.Primary" Size="MudBlazor.Size.Large" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="3">
+                    <MudCardContent>
+                        <div class="d-flex justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">Total Models</MudText>
+                                <MudText Typo="Typo.h6">@_totalModels</MudText>
+                                <MudText Typo="Typo.caption">@_activeModelsCount active</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Assessment" Color="MudBlazor.Color.Success" Size="MudBlazor.Size.Large" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="3">
+                    <MudCardContent>
+                        <div class="d-flex justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">Data Collection</MudText>
+                                <MudText Typo="Typo.h6">Active</MudText>
+                                <MudText Typo="Typo.caption">Background service running</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Storage" Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="3">
+                    <MudCardContent>
+                        <div class="d-flex justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">Last Training</MudText>
+                                <MudText Typo="Typo.h6">@(_activeModel?.CreatedAt.ToString("MMM dd") ?? "N/A")</MudText>
+                                <MudText Typo="Typo.caption">@(_activeModel?.CreatedAt.ToString("HH:mm") ?? "")</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="MudBlazor.Color.Warning" Size="MudBlazor.Size.Large" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Quick Actions</MudText>
+                    <MudStack Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" Href="/MLForecasting/ModelTraining" FullWidth>
+                            <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-2" />
+                            Train New Model
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="MudBlazor.Color.Primary" Href="/MLForecasting/ForecastGeneration" FullWidth>
+                            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" />
+                            Generate Forecast
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="MudBlazor.Color.Secondary" Href="/MLForecasting/ModelManagement" FullWidth>
+                            <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-2" />
+                            View All Models
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Getting Started</MudText>
+                    <MudList T="string" Dense>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" IconColor="MudBlazor.Color.Success">
+                            Data collection running in background
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Info" IconColor="MudBlazor.Color.Info">
+                            Need 6+ months of data for best results
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.TipsAndUpdates" IconColor="MudBlazor.Color.Warning">
+                            Train your first model to start forecasting
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.AutoGraph" IconColor="MudBlazor.Color.Primary">
+                            Generated forecasts will appear here
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private ForecastModel? _activeModel;
+    private int _totalModels = 0;
+    private int _activeModelsCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (StateService.HasConfiguration)
+        {
+            await LoadDashboardData();
+        }
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            var activeModelResult = await ForecastingService.GetActiveModelAsync(StateService.CurrentConfigId.Value);
+            if (activeModelResult.IsSuccess)
+            {
+                _activeModel = activeModelResult.Value;
+            }
+
+            var modelsResult = await ForecastingService.ListModelsAsync(StateService.CurrentConfigId.Value, includeInactive: true);
+            if (modelsResult.IsSuccess)
+            {
+                var models = modelsResult.Value.ToList();
+                _totalModels = models.Count;
+                _activeModelsCount = models.Count(m => m.IsActive);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading dashboard: {ex.Message}", Severity.Error);
+        }
+    }
+}

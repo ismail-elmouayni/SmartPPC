@@ -1,0 +1,203 @@
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.ML.Services
+@using SmartPPC.Core.ML.Domain
+@inject ConfigurationStateService StateService
+@inject IForecastingService ForecastingService
+@inject ISnackbar Snackbar
+
+<PageTitle>Train ML Model</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Psychology" /> Train ML Forecasting Model
+    </MudText>
+
+    @if (!StateService.HasConfiguration)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Please load a configuration first from the Dashboard.
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper Elevation="3" Class="pa-4 mb-4">
+            <MudForm @ref="_form">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudSelect @bind-Value="_modelType" Label="Model Type" Variant="Variant.Outlined" Required>
+                            <MudSelectItem Value="ForecastModelType.Custom">FastTree Regression (Recommended)</MudSelectItem>
+                            <MudSelectItem Value="ForecastModelType.LSTMAttention">LSTM + Attention (Fallback to FastTree)</MudSelectItem>
+                            <MudSelectItem Value="ForecastModelType.MovingAverage">Moving Average (Baseline)</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="_lookbackWindow" Label="Lookback Window (days)" Variant="Variant.Outlined" Min="7" Max="90" Required />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="_forecastHorizon" Label="Forecast Horizon (days)" Variant="Variant.Outlined" Min="1" Max="30" Required />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudNumericField @bind-Value="_validationSplit" Label="Validation Split (%)" Variant="Variant.Outlined" Min="10" Max="40" Step="5" Required />
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudNumericField @bind-Value="_epochs" Label="Epochs" Variant="Variant.Outlined" Min="10" Max="500" Required />
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudNumericField @bind-Value="_learningRate" Label="Learning Rate" Variant="Variant.Outlined" Min="0.0001" Max="0.1" Step="0.001" Format="F4" Required />
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudNumericField @bind-Value="_batchSize" Label="Batch Size" Variant="Variant.Outlined" Min="8" Max="128" Required />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="TrainModel" Disabled="_isTraining" FullWidth>
+                            @if (_isTraining)
+                            {
+                                <MudProgressCircular Class="mr-2" Size="MudBlazor.Size.Small" Indeterminate />
+                                <MudText>Training... (this may take 30-60 seconds)</MudText>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-2" />
+                                <MudText>Train Model</MudText>
+                            }
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudPaper>
+
+        @if (_trainingResult != null)
+        {
+            <MudPaper Elevation="3" Class="pa-4">
+                <MudText Typo="Typo.h5" Class="mb-3">Training Results</MudText>
+
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard>
+                            <MudCardContent>
+                                <MudText Typo="Typo.caption">MAE (Mean Absolute Error)</MudText>
+                                <MudText Typo="Typo.h6">@_trainingResult.ValidationMAE?.ToString("F2")</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard>
+                            <MudCardContent>
+                                <MudText Typo="Typo.caption">MAPE (%)</MudText>
+                                <MudText Typo="Typo.h6">@_trainingResult.ValidationMAPE.ToString("F2")%</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard>
+                            <MudCardContent>
+                                <MudText Typo="Typo.caption">RMSE</MudText>
+                                <MudText Typo="Typo.h6">@_trainingResult.ValidationRMSE?.ToString("F2")</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard>
+                            <MudCardContent>
+                                <MudText Typo="Typo.caption">R² Score</MudText>
+                                <MudText Typo="Typo.h6">@_trainingResult.ValidationAccuracy?.ToString("F4")</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Success">
+                            Model trained successfully! Model ID: @_trainingResult.Id
+                        </MudAlert>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Secondary" Href="/MLForecasting/ModelManagement">
+                            View All Models
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="MudBlazor.Color.Primary" Href="/MLForecasting/ForecastGeneration" Class="ml-2">
+                            Generate Forecast
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+    }
+</MudContainer>
+
+@code {
+    private MudForm? _form;
+    private bool _isTraining = false;
+    private ForecastModel? _trainingResult;
+
+    // Training parameters
+    private ForecastModelType _modelType = ForecastModelType.Custom;
+    private int _lookbackWindow = 30;
+    private int _forecastHorizon = 14;
+    private float _validationSplit = 20;
+    private int _epochs = 100;
+    private double _learningRate = 0.001;
+    private int _batchSize = 32;
+
+    private async Task TrainModel()
+    {
+        if (!StateService.HasConfiguration)
+        {
+            Snackbar.Add("Please load a configuration first", Severity.Warning);
+            return;
+        }
+
+        _isTraining = true;
+        _trainingResult = null;
+        StateHasChanged();
+
+        try
+        {
+            var parameters = new TrainingParameters
+            {
+                TrainingStartDate = DateTime.UtcNow.AddYears(-2),
+                TrainingEndDate = DateTime.UtcNow.AddDays(-1),
+                LookbackWindow = _lookbackWindow,
+                ForecastHorizon = _forecastHorizon,
+                ValidationSplit = _validationSplit / 100f,
+                Epochs = _epochs,
+                LearningRate = (float)_learningRate,
+                BatchSize = _batchSize
+            };
+
+            var result = await ForecastingService.TrainModelAsync(
+                StateService.CurrentConfigId.Value,
+                _modelType,
+                parameters);
+
+            if (result.IsSuccess)
+            {
+                _trainingResult = result.Value;
+                Snackbar.Add("Model trained successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Training failed: {result.Errors.First().Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isTraining = false;
+            StateHasChanged();
+        }
+    }
+}

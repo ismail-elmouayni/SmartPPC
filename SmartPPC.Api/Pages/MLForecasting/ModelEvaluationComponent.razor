@@ -1,0 +1,405 @@
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.ML.Services
+@using SmartPPC.Core.ML.Domain
+@using SmartPPC.Core.ML.Repositories
+@inject ConfigurationStateService StateService
+@inject IForecastingService ForecastingService
+@inject IForecastModelRepository ModelRepository
+@inject IModelMetricsRepository MetricsRepository
+@inject ISnackbar Snackbar
+
+<PageTitle>Model Evaluation</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Analytics" /> Model Evaluation & Comparison
+    </MudText>
+
+    @if (!StateService.HasConfiguration)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Please load a configuration first from the Dashboard.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12">
+                <MudPaper Elevation="3" Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Select Models to Compare</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="Guid" @bind-Value="_selectedModel1" Label="Model 1" Variant="Variant.Outlined" Required>
+                                @foreach (var model in _availableModels)
+                                {
+                                    <MudSelectItem T="Guid" Value="@model.Id">
+                                        @model.Name (@model.ModelType) - @model.CreatedAt.ToString("MMM dd, yyyy")
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="Guid?" @bind-Value="_selectedModel2" Label="Model 2 (Optional)" Variant="Variant.Outlined">
+                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">None (Single Model Evaluation)</MudSelectItem>
+                                @foreach (var model in _availableModels)
+                                {
+                                    <MudSelectItem T="Guid?" Value="@((Guid?)model.Id)">
+                                        @model.Name (@model.ModelType) - @model.CreatedAt.ToString("MMM dd, yyyy")
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudDatePicker @bind-Date="_evaluationStartDate" Label="Evaluation Start" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudDatePicker @bind-Date="_evaluationEndDate" Label="Evaluation End" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="EvaluateModels" Disabled="_isEvaluating" FullWidth>
+                                @if (_isEvaluating)
+                                {
+                                    <MudProgressCircular Class="mr-2" Size="MudBlazor.Size.Small" Indeterminate />
+                                    <MudText>Evaluating...</MudText>
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Assessment" Class="mr-2" />
+                                    <MudText>Evaluate Models</MudText>
+                                }
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+
+            @if (_evaluationResults.Any())
+            {
+                <MudItem xs="12">
+                    <MudPaper Elevation="3" Class="pa-4 mb-4">
+                        <MudText Typo="Typo.h5" Class="mb-3">Performance Comparison</MudText>
+                        <MudSimpleTable Dense Hover Striped>
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    @foreach (var result in _evaluationResults)
+                                    {
+                                        <th>@result.ModelName</th>
+                                    }
+                                    @if (_evaluationResults.Count > 1)
+                                    {
+                                        <th>Winner</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>MAE (Mean Absolute Error)</strong></td>
+                                    @foreach (var result in _evaluationResults)
+                                    {
+                                        <td>
+                                            @if (result.Metrics != null)
+                                            {
+                                                <span class="@GetMetricClass(result.Metrics.MAE, _evaluationResults.Where(r => r.Metrics != null).Min(r => r.Metrics!.MAE), true)">
+                                                    @result.Metrics.MAE.ToString("F2")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </td>
+                                    }
+                                    @if (_evaluationResults.Count > 1)
+                                    {
+                                        <td><MudChip T="string" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Success">@GetBestModelName("MAE")</MudChip></td>
+                                    }
+                                </tr>
+                                <tr>
+                                    <td><strong>RMSE (Root Mean Squared Error)</strong></td>
+                                    @foreach (var result in _evaluationResults)
+                                    {
+                                        <td>
+                                            @if (result.Metrics != null)
+                                            {
+                                                <span class="@GetMetricClass(result.Metrics.RMSE, _evaluationResults.Where(r => r.Metrics != null).Min(r => r.Metrics!.RMSE), true)">
+                                                    @result.Metrics.RMSE.ToString("F2")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </td>
+                                    }
+                                    @if (_evaluationResults.Count > 1)
+                                    {
+                                        <td><MudChip T="string" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Success">@GetBestModelName("RMSE")</MudChip></td>
+                                    }
+                                </tr>
+                                <tr>
+                                    <td><strong>MAPE (Mean Absolute Percentage Error)</strong></td>
+                                    @foreach (var result in _evaluationResults)
+                                    {
+                                        <td>
+                                            @if (result.Metrics != null)
+                                            {
+                                                <span class="@GetMetricClass(result.Metrics.MAPE, _evaluationResults.Where(r => r.Metrics != null).Min(r => r.Metrics!.MAPE), true)">
+                                                    @result.Metrics.MAPE.ToString("F2")%
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </td>
+                                    }
+                                    @if (_evaluationResults.Count > 1)
+                                    {
+                                        <td><MudChip T="string" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Success">@GetBestModelName("MAPE")</MudChip></td>
+                                    }
+                                </tr>
+                                <tr>
+                                    <td><strong>R² (Coefficient of Determination)</strong></td>
+                                    @foreach (var result in _evaluationResults)
+                                    {
+                                        <td>
+                                            @if (result.Metrics?.RSquared != null)
+                                            {
+                                                var maxR2 = _evaluationResults.Where(r => r.Metrics?.RSquared != null).Max(r => r.Metrics!.RSquared!.Value);
+                                                <span class="@GetMetricClass(result.Metrics.RSquared.Value, maxR2, false)">
+                                                    @result.Metrics.RSquared.Value.ToString("F4")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </td>
+                                    }
+                                    @if (_evaluationResults.Count > 1)
+                                    {
+                                        <td><MudChip T="string" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Success">@GetBestModelName("RSquared")</MudChip></td>
+                                    }
+                                </tr>
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudGrid>
+                        @foreach (var result in _evaluationResults)
+                        {
+                            <MudItem xs="12" md="@(_evaluationResults.Count > 1 ? 6 : 12)">
+                                <MudCard Elevation="3">
+                                    <MudCardHeader>
+                                        <CardHeaderContent>
+                                            <MudText Typo="Typo.h6">@result.ModelName</MudText>
+                                        </CardHeaderContent>
+                                        <CardHeaderActions>
+                                            @if (result.Model?.IsActive == true)
+                                            {
+                                                <MudChip T="string" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Success">Active</MudChip>
+                                            }
+                                        </CardHeaderActions>
+                                    </MudCardHeader>
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.body2" Class="mb-2"><strong>Model Type:</strong> @result.Model?.ModelType</MudText>
+                                        <MudText Typo="Typo.body2" Class="mb-2"><strong>Created:</strong> @result.Model?.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                                        <MudText Typo="Typo.body2" Class="mb-2"><strong>Training MAE:</strong> @result.Model?.ValidationMAE?.ToString("F2")</MudText>
+                                        <MudText Typo="Typo.body2" Class="mb-2"><strong>Training MAPE:</strong> @result.Model?.ValidationMAPE.ToString("F2")%</MudText>
+
+                                        @if (result.Metrics != null)
+                                        {
+                                            <MudDivider Class="my-2" />
+                                            <MudText Typo="Typo.caption" Class="mb-1">Evaluation Period Metrics:</MudText>
+                                            <MudText Typo="Typo.body2" Class="mb-1"><strong>MAE:</strong> @result.Metrics.MAE.ToString("F2")</MudText>
+                                            <MudText Typo="Typo.body2" Class="mb-1"><strong>RMSE:</strong> @result.Metrics.RMSE.ToString("F2")</MudText>
+                                            <MudText Typo="Typo.body2" Class="mb-1"><strong>MAPE:</strong> @result.Metrics.MAPE.ToString("F2")%</MudText>
+                                            <MudText Typo="Typo.body2"><strong>R²:</strong> @(result.Metrics.RSquared?.ToString("F4") ?? "N/A")</MudText>
+                                        }
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudItem>
+
+                @if (_evaluationResults.Count > 1)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Success" Class="mt-2">
+                            <strong>Recommendation:</strong> Based on the evaluation metrics, <strong>@_bestOverallModel</strong> performs best overall.
+                        </MudAlert>
+                    </MudItem>
+                }
+            }
+            else if (!_availableModels.Any())
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info">
+                        No trained models available yet. Please train a model first from the Model Training page.
+                    </MudAlert>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private bool _isEvaluating = false;
+    private List<ForecastModel> _availableModels = new();
+    private Guid _selectedModel1 = Guid.Empty;
+    private Guid? _selectedModel2 = null;
+    private DateTime? _evaluationStartDate = DateTime.Today.AddDays(-30);
+    private DateTime? _evaluationEndDate = DateTime.Today;
+    private List<ModelEvaluationResult> _evaluationResults = new();
+    private string _bestOverallModel = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (StateService.HasConfiguration)
+        {
+            await LoadModels();
+        }
+    }
+
+    private async Task LoadModels()
+    {
+        try
+        {
+            var result = await ForecastingService.ListModelsAsync(StateService.CurrentConfigId.Value, includeInactive: true);
+            if (result.IsSuccess)
+            {
+                _availableModels = result.Value.OrderByDescending(m => m.CreatedAt).ToList();
+                if (_availableModels.Any())
+                {
+                    _selectedModel1 = _availableModels.First().Id;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading models: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task EvaluateModels()
+    {
+        if (_selectedModel1 == Guid.Empty)
+        {
+            Snackbar.Add("Please select at least one model", Severity.Warning);
+            return;
+        }
+
+        _isEvaluating = true;
+        _evaluationResults.Clear();
+        StateHasChanged();
+
+        try
+        {
+            await EvaluateModel(_selectedModel1);
+
+            if (_selectedModel2.HasValue && _selectedModel2.Value != Guid.Empty)
+            {
+                await EvaluateModel(_selectedModel2.Value);
+            }
+
+            DetermineBestModel();
+            Snackbar.Add("Evaluation completed successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error during evaluation: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isEvaluating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task EvaluateModel(Guid modelId)
+    {
+        var modelResult = await ModelRepository.GetByIdAsync(modelId);
+        if (!modelResult.IsSuccess || modelResult.Value == null)
+        {
+            return;
+        }
+
+        var model = modelResult.Value;
+        var metricsResult = await MetricsRepository.GetByModelAndTypeAsync(modelId, EvaluationType.Validation);
+
+        var evaluationResult = new ModelEvaluationResult
+        {
+            ModelId = modelId,
+            ModelName = model.Name,
+            Model = model,
+            Metrics = metricsResult.IsSuccess ? metricsResult.Value.FirstOrDefault() : null
+        };
+
+        _evaluationResults.Add(evaluationResult);
+    }
+
+    private void DetermineBestModel()
+    {
+        if (_evaluationResults.Count <= 1)
+        {
+            return;
+        }
+
+        var scores = new Dictionary<string, int>();
+
+        foreach (var result in _evaluationResults)
+        {
+            scores[result.ModelName] = 0;
+        }
+
+        var bestMAE = _evaluationResults.Where(r => r.Metrics != null).MinBy(r => r.Metrics!.MAE);
+        if (bestMAE != null) scores[bestMAE.ModelName]++;
+
+        var bestRMSE = _evaluationResults.Where(r => r.Metrics != null).MinBy(r => r.Metrics!.RMSE);
+        if (bestRMSE != null) scores[bestRMSE.ModelName]++;
+
+        var bestMAPE = _evaluationResults.Where(r => r.Metrics != null).MinBy(r => r.Metrics!.MAPE);
+        if (bestMAPE != null) scores[bestMAPE.ModelName]++;
+
+        var bestR2 = _evaluationResults.Where(r => r.Metrics?.RSquared != null).MaxBy(r => r.Metrics!.RSquared!.Value);
+        if (bestR2 != null) scores[bestR2.ModelName]++;
+
+        _bestOverallModel = scores.OrderByDescending(kvp => kvp.Value).First().Key;
+    }
+
+    private string GetBestModelName(string metricType)
+    {
+        return metricType switch
+        {
+            "MAE" => _evaluationResults.Where(r => r.Metrics != null).MinBy(r => r.Metrics!.MAE)?.ModelName ?? "N/A",
+            "RMSE" => _evaluationResults.Where(r => r.Metrics != null).MinBy(r => r.Metrics!.RMSE)?.ModelName ?? "N/A",
+            "MAPE" => _evaluationResults.Where(r => r.Metrics != null).MinBy(r => r.Metrics!.MAPE)?.ModelName ?? "N/A",
+            "RSquared" => _evaluationResults.Where(r => r.Metrics?.RSquared != null).MaxBy(r => r.Metrics!.RSquared!.Value)?.ModelName ?? "N/A",
+            _ => "N/A"
+        };
+    }
+
+    private string GetMetricClass(double value, double bestValue, bool lowerIsBetter)
+    {
+        const double threshold = 0.05;
+        var diff = Math.Abs(value - bestValue) / Math.Max(Math.Abs(bestValue), 1e-10);
+
+        if (diff < threshold)
+        {
+            return "mud-success-text font-weight-bold";
+        }
+        return "";
+    }
+
+    private class ModelEvaluationResult
+    {
+        public Guid ModelId { get; set; }
+        public string ModelName { get; set; } = "";
+        public ForecastModel? Model { get; set; }
+        public ModelMetrics? Metrics { get; set; }
+    }
+}

@@ -1,0 +1,293 @@
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.ML.Services
+@using SmartPPC.Core.ML.Domain
+@using SmartPPC.Core.ML.Repositories
+@inject ConfigurationStateService StateService
+@inject IForecastTrainingDataRepository TrainingDataRepository
+@inject ISnackbar Snackbar
+
+<PageTitle>Data Collection</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Storage" /> Training Data Collection
+    </MudText>
+
+    @if (!StateService.HasConfiguration)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Please load a configuration first from the Dashboard.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="3">
+                    <MudCardContent>
+                        <div class="d-flex justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">Total Records</MudText>
+                                <MudText Typo="Typo.h6">@_totalRecords</MudText>
+                                <MudText Typo="Typo.caption">Across all stations</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.Dataset" Color="MudBlazor.Color.Primary" Size="MudBlazor.Size.Large" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="3">
+                    <MudCardContent>
+                        <div class="d-flex justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">Date Range</MudText>
+                                <MudText Typo="Typo.h6">@_daysCovered days</MudText>
+                                <MudText Typo="Typo.caption">@_earliestDate?.ToString("MMM dd, yyyy") - @_latestDate?.ToString("MMM dd, yyyy")</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="MudBlazor.Color.Success" Size="MudBlazor.Size.Large" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="3">
+                    <MudCardContent>
+                        <div class="d-flex justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">Collection Status</MudText>
+                                <MudText Typo="Typo.h6">Active</MudText>
+                                <MudText Typo="Typo.caption">Background service running</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="MudBlazor.Color.Success" Size="MudBlazor.Size.Large" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="3">
+                    <MudCardContent>
+                        <div class="d-flex justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">Stations Tracked</MudText>
+                                <MudText Typo="Typo.h6">@_stationsWithData.Count</MudText>
+                                <MudText Typo="Typo.caption">With collected data</MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Color="MudBlazor.Color.Info" Size="MudBlazor.Size.Large" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudPaper Elevation="3" Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Filter Data</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" md="4">
+                            <MudSelect T="int" @bind-Value="_selectedStationFilter" Label="Station" Variant="Variant.Outlined">
+                                <MudSelectItem T="int" Value="0">All Stations</MudSelectItem>
+                                @foreach (var stationId in _stationsWithData)
+                                {
+                                    <MudSelectItem T="int" Value="@stationId">Station @stationId</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudDatePicker @bind-Date="_filterStartDate" Label="Start Date" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudDatePicker @bind-Date="_filterEndDate" Label="End Date" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="LoadTrainingData" FullWidth>
+                                <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="mr-2" />
+                                Apply
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+
+            @if (_isLoading)
+            {
+                <MudItem xs="12">
+                    <MudProgressLinear Color="MudBlazor.Color.Primary" Indeterminate />
+                </MudItem>
+            }
+            else if (_trainingData.Any())
+            {
+                <MudItem xs="12">
+                    <MudPaper Elevation="3" Class="pa-4">
+                        <MudText Typo="Typo.h6" Class="mb-3">Collected Training Data (@_trainingData.Count records)</MudText>
+                        <MudTable T="ForecastTrainingData" Items="@_trainingData" Dense Hover Striped FixedHeader Height="500px">
+                            <HeaderContent>
+                                <MudTh>Date</MudTh>
+                                <MudTh>Station</MudTh>
+                                <MudTh>Demand</MudTh>
+                                <MudTh>Buffer Level</MudTh>
+                                <MudTh>Order Amount</MudTh>
+                                <MudTh>Day/Month</MudTh>
+                                <MudTh>Created At</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Date">@context.ObservationDate.ToString("yyyy-MM-dd")</MudTd>
+                                <MudTd DataLabel="Station">Station @context.StationDeclarationId</MudTd>
+                                <MudTd DataLabel="Demand">@context.DemandValue</MudTd>
+                                <MudTd DataLabel="Buffer Level">@(context.BufferLevel?.ToString() ?? "N/A")</MudTd>
+                                <MudTd DataLabel="Order Amount">@(context.OrderAmount?.ToString() ?? "N/A")</MudTd>
+                                <MudTd DataLabel="Day/Month">@context.DayOfWeek / @context.Month</MudTd>
+                                <MudTd DataLabel="Created At">@context.CreatedAt.ToString("MMM dd, HH:mm")</MudTd>
+                            </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager PageSizeOptions="new int[] { 25, 50, 100 }" />
+                            </PagerContent>
+                        </MudTable>
+                    </MudPaper>
+                </MudItem>
+            }
+            else
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info">
+                        No training data collected yet. The background service will automatically collect data as your system operates.
+                    </MudAlert>
+                </MudItem>
+            }
+
+            <MudItem xs="12">
+                <MudPaper Elevation="3" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-2">Data Collection Information</MudText>
+                    <MudList T="string" Dense>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Info" IconColor="MudBlazor.Color.Info">
+                            Data is automatically collected every hour by the background service
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Timeline" IconColor="MudBlazor.Color.Primary">
+                            Minimum 6 months of data recommended for optimal model training
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Storage" IconColor="MudBlazor.Color.Success">
+                            All historical demand, inventory levels, and lead times are captured
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Security" IconColor="MudBlazor.Color.Warning">
+                            Data is stored securely and used only for ML model training
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = false;
+    private List<ForecastTrainingData> _trainingData = new();
+    private int _totalRecords = 0;
+    private int _daysCovered = 0;
+    private DateTime? _earliestDate;
+    private DateTime? _latestDate;
+    private List<int> _stationsWithData = new();
+
+    private int _selectedStationFilter = 0;
+    private DateTime? _filterStartDate;
+    private DateTime? _filterEndDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (StateService.HasConfiguration)
+        {
+            await LoadStatistics();
+            await LoadTrainingData();
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        try
+        {
+            // Get all data without date filters to calculate statistics
+            var dataResult = await TrainingDataRepository.GetByConfigurationAsync(
+                StateService.CurrentConfigId.Value,
+                DateTime.MinValue,
+                DateTime.MaxValue);
+
+            if (dataResult.IsSuccess)
+            {
+                // Flatten dictionary values into single list
+                var allData = dataResult.Value.SelectMany(kvp => kvp.Value).ToList();
+                _totalRecords = allData.Count;
+
+                if (allData.Any())
+                {
+                    _earliestDate = allData.Min(d => d.ObservationDate);
+                    _latestDate = allData.Max(d => d.ObservationDate);
+                    _daysCovered = (_latestDate.Value - _earliestDate.Value).Days;
+                    _stationsWithData = allData.Select(d => d.StationDeclarationId).Distinct().ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading statistics: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadTrainingData()
+    {
+        if (!StateService.HasConfiguration)
+        {
+            Snackbar.Add("Please load a configuration first", Severity.Warning);
+            return;
+        }
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (_selectedStationFilter > 0)
+            {
+                var result = await TrainingDataRepository.GetByStationAsync(
+                    _selectedStationFilter,
+                    _filterStartDate ?? DateTime.MinValue,
+                    _filterEndDate ?? DateTime.MaxValue);
+
+                if (result.IsSuccess)
+                {
+                    _trainingData = result.Value.OrderByDescending(d => d.ObservationDate).ToList();
+                }
+                else
+                {
+                    Snackbar.Add($"Error loading data: {result.Errors.First().Message}", Severity.Error);
+                }
+            }
+            else
+            {
+                var result = await TrainingDataRepository.GetByConfigurationAsync(
+                    StateService.CurrentConfigId.Value,
+                    _filterStartDate ?? DateTime.MinValue,
+                    _filterEndDate ?? DateTime.MaxValue);
+
+                if (result.IsSuccess)
+                {
+                    // Flatten dictionary values into single list
+                    _trainingData = result.Value.SelectMany(kvp => kvp.Value).OrderByDescending(d => d.ObservationDate).ToList();
+                }
+                else
+                {
+                    Snackbar.Add($"Error loading data: {result.Errors.First().Message}", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

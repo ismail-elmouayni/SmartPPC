@@ -106,6 +106,34 @@ public class Program
         // Register Configuration State Service (for sharing state across pages)
         builder.Services.AddScoped<SmartPPC.Api.Services.ConfigurationStateService>();
 
+        // Register ML Forecasting Services
+        builder.Services.AddScoped<SmartPPC.Core.ML.Services.IForecastDataCollectionService,
+            SmartPPC.Core.ML.Services.ForecastDataCollectionService>();
+        builder.Services.AddScoped<SmartPPC.Core.ML.Services.IForecastingService,
+            SmartPPC.Core.ML.Services.ForecastingService>();
+        builder.Services.AddScoped<SmartPPC.Core.ML.Services.IForecastFeatureEngineer,
+            SmartPPC.Core.ML.Services.ForecastFeatureEngineer>();
+        builder.Services.AddScoped<SmartPPC.Core.ML.Models.IForecastModelTrainer,
+            SmartPPC.Core.ML.Models.ForecastModelTrainer>();
+        builder.Services.AddScoped<SmartPPC.Core.ML.Models.ModelEvaluator>();
+
+        // Register ML Forecasting Repositories
+        builder.Services.AddScoped<SmartPPC.Core.ML.Repositories.IForecastTrainingDataRepository,
+            SmartPPC.Api.Repositories.ForecastTrainingDataRepository>();
+        builder.Services.AddScoped<SmartPPC.Core.ML.Repositories.IForecastModelRepository,
+            SmartPPC.Api.Repositories.ForecastModelRepository>();
+        builder.Services.AddScoped<SmartPPC.Core.ML.Repositories.IForecastPredictionRepository,
+            SmartPPC.Api.Repositories.ForecastPredictionRepository>();
+        builder.Services.AddScoped<SmartPPC.Core.ML.Repositories.IModelMetricsRepository,
+            SmartPPC.Api.Repositories.ModelMetricsRepository>();
+
+        // Configure ML Forecasting Options
+        builder.Services.Configure<SmartPPC.Api.Services.ForecastDataCollectionOptions>(
+            builder.Configuration.GetSection(SmartPPC.Api.Services.ForecastDataCollectionOptions.SectionName));
+
+        // Register Background Data Collection Service
+        builder.Services.AddHostedService<SmartPPC.Api.Services.ForecastDataCollectionBackgroundService>();
+
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();

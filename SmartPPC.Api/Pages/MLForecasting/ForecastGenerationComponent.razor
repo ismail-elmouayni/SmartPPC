@@ -1,0 +1,218 @@
+@using SmartPPC.Api.Services
+@using SmartPPC.Core.ML.Services
+@using SmartPPC.Core.ML.Domain
+@using System.Text.Json
+@inject ConfigurationStateService StateService
+@inject IForecastingService ForecastingService
+@inject ISnackbar Snackbar
+
+<PageTitle>Generate Forecast</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" /> Generate Demand Forecast
+    </MudText>
+
+    @if (!StateService.HasConfiguration)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            Please load a configuration first from the Dashboard.
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper Elevation="3" Class="pa-4 mb-4">
+            <MudForm @ref="_form">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudSelect @bind-Value="_selectedStationId" Label="Station" Variant="Variant.Outlined" Required>
+                            @foreach (var station in _stations)
+                            {
+                                <MudSelectItem Value="@station.Key">@station.Value</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" md="3">
+                        <MudNumericField @bind-Value="_forecastHorizon" Label="Forecast Horizon (days)" Variant="Variant.Outlined" Min="1" Max="30" Required />
+                    </MudItem>
+
+                    <MudItem xs="12" md="3">
+                        <MudDatePicker @bind-Date="_startDate" Label="Start Date" Variant="Variant.Outlined" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="GenerateForecast" Disabled="_isGenerating" FullWidth>
+                            @if (_isGenerating)
+                            {
+                                <MudProgressCircular Class="mr-2" Size="MudBlazor.Size.Small" Indeterminate />
+                                <MudText>Generating...</MudText>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.AutoGraph" Class="mr-2" />
+                                <MudText>Generate Forecast</MudText>
+                            }
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudPaper>
+
+        @if (_prediction != null && _predictedValues != null)
+        {
+            <MudPaper Elevation="3" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h5" Class="mb-3">Forecast Results</MudText>
+
+                <MudSimpleTable Dense Hover Striped>
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Date</th>
+                            <th>Predicted Demand</th>
+                            <th>Lower Bound (90%)</th>
+                            <th>Upper Bound (90%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < _predictedValues.Length; i++)
+                        {
+                            var date = _prediction.ForecastStartDate.AddDays(i);
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td>@date.ToString("yyyy-MM-dd")</td>
+                                <td><strong>@_predictedValues[i]</strong></td>
+                                <td>@_lowerBound?[i]</td>
+                                <td>@_upperBound?[i]</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+
+                <MudText Typo="Typo.caption" Class="mt-2">
+                    Generated on: @_prediction.PredictionDate.ToString("yyyy-MM-dd HH:mm") |
+                    Model ID: @_prediction.ForecastModelId.ToString().Substring(0, 8)... |
+                    Confidence: @((_prediction.ConfidenceLevel * 100).ToString())%
+                </MudText>
+            </MudPaper>
+
+            <MudPaper Elevation="3" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-2">Summary Statistics</MudText>
+                <MudGrid>
+                    <MudItem xs="6" sm="3">
+                        <MudCard>
+                            <MudCardContent>
+                                <MudText Typo="Typo.caption">Average Demand</MudText>
+                                <MudText Typo="Typo.h6">@_predictedValues.Average().ToString("F0")</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudCard>
+                            <MudCardContent>
+                                <MudText Typo="Typo.caption">Min Demand</MudText>
+                                <MudText Typo="Typo.h6">@_predictedValues.Min()</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudCard>
+                            <MudCardContent>
+                                <MudText Typo="Typo.caption">Max Demand</MudText>
+                                <MudText Typo="Typo.h6">@_predictedValues.Max()</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudCard>
+                            <MudCardContent>
+                                <MudText Typo="Typo.caption">Total Demand</MudText>
+                                <MudText Typo="Typo.h6">@_predictedValues.Sum()</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+    }
+</MudContainer>
+
+@code {
+    private MudForm? _form;
+    private bool _isGenerating = false;
+    private ForecastPrediction? _prediction;
+    private int[]? _predictedValues;
+    private int[]? _lowerBound;
+    private int[]? _upperBound;
+
+    private int _selectedStationId = 0;
+    private int _forecastHorizon = 14;
+    private DateTime? _startDate = DateTime.Today;
+
+    private Dictionary<int, string> _stations = new()
+    {
+        { 1, "Station 1 - Example" },
+        { 2, "Station 2 - Example" }
+    };
+
+    protected override void OnInitialized()
+    {
+        if (_stations.Any())
+        {
+            _selectedStationId = _stations.First().Key;
+        }
+    }
+
+    private async Task GenerateForecast()
+    {
+        if (!StateService.HasConfiguration)
+        {
+            Snackbar.Add("Please load a configuration first", Severity.Warning);
+            return;
+        }
+
+        if (_selectedStationId == 0)
+        {
+            Snackbar.Add("Please select a station", Severity.Warning);
+            return;
+        }
+
+        _isGenerating = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ForecastingService.GenerateForecastAsync(
+                _selectedStationId,
+                _forecastHorizon,
+                _startDate);
+
+            if (result.IsSuccess)
+            {
+                _prediction = result.Value;
+                _predictedValues = JsonSerializer.Deserialize<int[]>(_prediction.PredictedValues);
+                _lowerBound = !string.IsNullOrEmpty(_prediction.LowerBound)
+                    ? JsonSerializer.Deserialize<int[]>(_prediction.LowerBound)
+                    : null;
+                _upperBound = !string.IsNullOrEmpty(_prediction.UpperBound)
+                    ? JsonSerializer.Deserialize<int[]>(_prediction.UpperBound)
+                    : null;
+
+                Snackbar.Add("Forecast generated successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Generation failed: {result.Errors.First().Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isGenerating = false;
+            StateHasChanged();
+        }
+    }
+}
