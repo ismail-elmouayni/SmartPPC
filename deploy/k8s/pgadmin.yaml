@@ -1,0 +1,63 @@
+# pgAdmin Deployment (Optional - for database management)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: smartppc
+  labels:
+    app: pgadmin
+    app.kubernetes.io/name: pgadmin
+    app.kubernetes.io/part-of: smartppc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      containers:
+        - name: pgadmin
+          image: dpage/pgadmin4:latest
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: smartppc-config
+                  key: PGADMIN_EMAIL
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: smartppc-secrets
+                  key: pgadmin-password
+            - name: PGADMIN_CONFIG_SERVER_MODE
+              value: "False"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin
+  namespace: smartppc
+  labels:
+    app: pgadmin
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30050  # Access via http://localhost:30050
+      name: http
+  selector:
+    app: pgadmin
