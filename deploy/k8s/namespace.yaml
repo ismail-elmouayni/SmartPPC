@@ -1,0 +1,8 @@
+# SmartPPC Kubernetes Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: smartppc
+  labels:
+    app.kubernetes.io/name: smartppc
+    app.kubernetes.io/part-of: smartppc

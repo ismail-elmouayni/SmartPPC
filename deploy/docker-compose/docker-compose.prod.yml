@@ -1,0 +1,107 @@
+# SmartPPC Production Docker Compose
+# For self-hosted deployment on Docker Desktop
+
+version: '3.8'
+
+services:
+  # ===========================================
+  # PostgreSQL Database
+  # ===========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartppc_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartppc}
+      POSTGRES_USER: ${POSTGRES_USER:-smartppc_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myPassword}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smartppc_user} -d ${POSTGRES_DB:-smartppc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - smartppc_network
+
+  # ===========================================
+  # SmartPPC API / Blazor Server Application
+  # ===========================================
+  smartppc-api:
+    build:
+      context: ../..
+      dockerfile: SmartPPC.Api/Dockerfile
+    image: smartppc-api:${APP_VERSION:-latest}
+    container_name: smartppc_api
+    restart: unless-stopped
+    environment:
+      # ASP.NET Core settings
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:8080
+      
+      # Database connection - Standard format for production (not Aspire)
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-smartppc};Username=${POSTGRES_USER:-smartppc_user};Password=${POSTGRES_PASSWORD:-ChangeMeInProduction!}"
+      
+      # For Aspire service defaults compatibility
+      ConnectionStrings__smartppc: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-smartppc};Username=${POSTGRES_USER:-smartppc_user};Password=${POSTGRES_PASSWORD:-ChangeMeInProduction!}"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - smartppc_network
+
+  # ===========================================
+  # pgAdmin - Database Management (Optional)
+  # ===========================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: smartppc_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@smartppc.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_CONFIG_CHECK_EMAIL_DELIVERABILITY: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smartppc_network
+    profiles:
+      - tools  # Only starts with: docker compose --profile tools up
+
+# ===========================================
+# Volumes for data persistence
+# ===========================================
+volumes:
+  postgres_data:
+    driver: local
+    name: smartppc_postgres_data
+  pgadmin_data:
+    driver: local
+    name: smartppc_pgadmin_data
+
+# ===========================================
+# Network configuration
+# ===========================================
+networks:
+  smartppc_network:
+    driver: bridge
+    name: smartppc_network
