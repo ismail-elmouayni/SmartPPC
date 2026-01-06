@@ -22,11 +22,25 @@ services:
         value: Production
       - key: ASPNETCORE_URLS
         value: http://+:8080
-      - key: ConnectionStrings__smartppc
+      # Database connection - constructed from individual properties for Npgsql compatibility
+      # Render's connectionString uses postgres:// URI format, but Npgsql needs ADO.NET format
+      - key: DATABASE_HOST
         fromDatabase:
           name: smartppc-db
-          property: connectionString
-      - key: ConnectionStrings__DefaultConnection
+          property: host
+      - key: DATABASE_PORT
         fromDatabase:
           name: smartppc-db
-          property: connectionString
+          property: port
+      - key: DATABASE_NAME
+        fromDatabase:
+          name: smartppc-db
+          property: database
+      - key: DATABASE_USER
+        fromDatabase:
+          name: smartppc-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: smartppc-db
+          property: password

@@ -15,6 +15,20 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.AddServiceDefaults();
 
+        // Build connection string from environment variables if present (for Render.com deployment)
+        // This handles the case where Render provides individual DB properties instead of a connection string
+        var dbHost = Environment.GetEnvironmentVariable("DATABASE_HOST");
+        var dbPort = Environment.GetEnvironmentVariable("DATABASE_PORT") ?? "5432";
+        var dbName = Environment.GetEnvironmentVariable("DATABASE_NAME");
+        var dbUser = Environment.GetEnvironmentVariable("DATABASE_USER");
+        var dbPassword = Environment.GetEnvironmentVariable("DATABASE_PASSWORD");
+
+        if (!string.IsNullOrEmpty(dbHost) && !string.IsNullOrEmpty(dbName))
+        {
+            var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword}";
+            builder.Configuration["ConnectionStrings:smartppc"] = connectionString;
+        }
+
         // Add Database Context - using Aspire-provided PostgreSQL connection
         builder.AddNpgsqlDbContext<ApplicationDbContext>("smartppc");
 
