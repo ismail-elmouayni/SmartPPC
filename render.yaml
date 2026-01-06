@@ -1,0 +1,32 @@
+# Render.com Infrastructure as Code
+# Deploy: Connect GitHub repo to Render, it auto-detects this file
+
+databases:
+  - name: smartppc-db
+    plan: free # Free for 90 days, then $7/mo
+    databaseName: smartppc
+    user: smartppc_user
+    region: frankfurt # Change to your preferred region: oregon, ohio, singapore, frankfurt
+
+services:
+  - type: web
+    name: smartppc-api
+    runtime: docker
+    plan: free # Free tier: 750 hours/month, spins down after 15 min inactivity
+    region: frankfurt # Should match database region
+    dockerfilePath: ./SmartPPC.Api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: ConnectionStrings__smartppc
+        fromDatabase:
+          name: smartppc-db
+          property: connectionString
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: smartppc-db
+          property: connectionString
